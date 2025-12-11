@@ -1,0 +1,41 @@
+Server IP: 45.132.255.109
+
+Django Admin Panel: http://45.132.255.109/admin/
+
+SSH ulanish:
+ssh root@45.132.255.109
+
+Deploy qilish bosqichlari:
+
+1. SSH orqali serverga ulanish:
+   ssh root@45.132.255.109
+
+2. Loyihani clone qilish:
+   cd /home
+   git clone https://github.com/ismoilov299/partsbot.git partsbot
+   cd partsbot
+
+3. Deploy scriptni ishga tushirish:
+   chmod +x deploy.sh
+   ./deploy.sh
+
+4. .env faylni sozlash:
+   nano .env
+   
+   Kerakli o'zgarishlar:
+   - BOT_TOKEN=your_real_token
+   - ADMIN_CHAT_ID=your_chat_id
+   - DJANGO_SECRET_KEY=random_secret_key
+
+5. Django superuser yaratish:
+   source venv/bin/activate
+   python manage.py createsuperuser
+
+6. Servislarni restart:
+   sudo systemctl restart zapchastbot zapchast-django
+
+7. Django admin'ga kirish:
+   http://45.132.255.109/admin/
+
+8. Bot loglarini ko'rish:
+   sudo journalctl -u zapchastbot -f
