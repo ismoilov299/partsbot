@@ -33,7 +33,6 @@ JAZZMIN_SETTINGS = {
     "site_brand": "Zapchast Bot",
     "welcome_sign": "Admin panelga xush kelibsiz",
     "copyright": "Zapchast Bot",
-    "search_model": ["src.django_app.Shop", "src.django_app.User"],
     
     # Theme
     "show_sidebar": True,
