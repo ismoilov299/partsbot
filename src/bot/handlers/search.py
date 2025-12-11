@@ -156,21 +156,28 @@ async def process_city_selection(callback: CallbackQuery, state: FSMContext):
                 part_cats_formatted = ' '.join([f'#{cat.replace(" ", "")}' for cat in part_cats_clean])
                 shop_text += f"📦 {part_cats_formatted}\n"
             
-            # Send photo if exists
+            # Try to send photo if exists
             if shop.photo_file_id:
-                await callback.message.answer_photo(
-                    photo=shop.photo_file_id,
-                    caption=shop_text
-                )
+                try:
+                    await callback.message.answer_photo(
+                        photo=shop.photo_file_id,
+                        caption=shop_text
+                    )
+                except Exception as e:
+                    # If photo fails (invalid file_id), send text only
+                    await callback.message.answer(shop_text)
             else:
                 await callback.message.answer(shop_text)
             
             # Send location if exists
             if shop.latitude and shop.longitude:
-                await callback.message.answer_location(
-                    latitude=shop.latitude,
-                    longitude=shop.longitude
-                )
+                try:
+                    await callback.message.answer_location(
+                        latitude=shop.latitude,
+                        longitude=shop.longitude
+                    )
+                except Exception:
+                    pass  # Skip if location fails
         
         result_text = ""  # Already sent shops individually
     else:
