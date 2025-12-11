@@ -7,13 +7,14 @@ import django
 from typing import Optional, List
 
 # Add the project root to the path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+sys.path.insert(0, project_root)
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.django_app.settings')
 django.setup()
 
-from django_app.models import User, City, CarBrand, Shop, Request
+from src.django_app.models import User, City, CarBrand, Shop, Request
 from asgiref.sync import sync_to_async
 
 
