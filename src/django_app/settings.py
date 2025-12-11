@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_app',
+    'src.django_app',
 ]
 
 # Jazzmin Settings
@@ -33,25 +33,25 @@ JAZZMIN_SETTINGS = {
     "site_brand": "Zapchast Bot",
     "welcome_sign": "Admin panelga xush kelibsiz",
     "copyright": "Zapchast Bot",
-    "search_model": ["django_app.Shop", "django_app.User"],
+    "search_model": ["src.django_app.Shop", "src.django_app.User"],
     
     # Theme
     "show_sidebar": True,
     "navigation_expanded": True,
     "hide_apps": [],
     "hide_models": [],
-    "order_with_respect_to": ["django_app"],
+    "order_with_respect_to": ["src.django_app"],
     
     # Icons
     "icons": {
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
-        "django_app.User": "fas fa-user-circle",
-        "django_app.City": "fas fa-city",
-        "django_app.CarBrand": "fas fa-car",
-        "django_app.Shop": "fas fa-store",
-        "django_app.Request": "fas fa-envelope",
+        "src.django_app.User": "fas fa-user-circle",
+        "src.django_app.City": "fas fa-city",
+        "src.django_app.CarBrand": "fas fa-car",
+        "src.django_app.Shop": "fas fa-store",
+        "src.django_app.Request": "fas fa-envelope",
     },
     
     # UI Tweaks
