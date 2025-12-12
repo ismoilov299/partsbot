@@ -36,3 +36,8 @@ class RequestStates(StatesGroup):
     enter_phone = State()
     choose_city = State()
     confirm = State()
+
+
+class AdminStates(StatesGroup):
+    """States for admin actions"""
+    enter_rejection_reason = State()
