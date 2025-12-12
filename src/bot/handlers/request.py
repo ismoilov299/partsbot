@@ -72,28 +72,38 @@ async def process_request_description(message: Message, state: FSMContext):
         
         await message.answer(confirmation_text, reply_markup=ReplyKeyboardRemove())
         
-        # Forward request to admin
+        # Forward request to admin and group
         admin_chat_id = os.getenv('ADMIN_CHAT_ID')
-        if admin_chat_id:
+        group_chat_id = os.getenv('GROUP_CHAT_ID', '-1003392656006')
+        
+        if admin_chat_id or group_chat_id:
             try:
                 # Create admin message
                 lang_text = "O'zbekcha" if user.language == 'uz' else 'Русский'
-                admin_text = "🔔 НОВЫЙ ЗАПРОС\n\n"
-                admin_text += f"👤 От: {user.first_name}"
+                admin_text = "🔔 YANGI SO'ROV\n\n"
+                admin_text += f"👤 Kimdan: {user.first_name}"
                 if user.username:
                     admin_text += f" (@{user.username})"
                 admin_text += f"\n📱 ID: {user.telegram_id}"
-                admin_text += f"\n🌐 Язык: {lang_text}"
-                admin_text += f"\n\n📝 Запрос:\n{message.text}"
-                admin_text += f"\n\n#запрос_{request.id}"
+                admin_text += f"\n🌐 Til: {lang_text}"
+                admin_text += f"\n\n📝 So'rov:\n{message.text}"
+                admin_text += f"\n\n#sorov_{request.id}"
                 
-                # Forward to admin
+                # Send to admin and group
                 from aiogram import Bot
                 bot = Bot(token=os.getenv('BOT_TOKEN'))
-                await bot.send_message(
-                    chat_id=admin_chat_id,
-                    text=admin_text
-                )
+                
+                if admin_chat_id:
+                    await bot.send_message(
+                        chat_id=admin_chat_id,
+                        text=admin_text
+                    )
+                
+                if group_chat_id:
+                    await bot.send_message(
+                        chat_id=group_chat_id,
+                        text=admin_text
+                    )
                 
             except Exception as e:
                 print(f"Error sending to admin: {e}")
