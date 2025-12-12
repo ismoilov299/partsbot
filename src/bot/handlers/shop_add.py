@@ -564,21 +564,21 @@ async def confirm_shop(callback: CallbackQuery, state: FSMContext):
                 city_name = f"{city.name_uz} / {city.name_ru}"
                 
                 # Create admin message
-                admin_text = "🏪 НОВЫЙ МАГАЗИН - ТРЕБУЕТСЯ ПРОВЕРКА\n\n"
-                admin_text += f"👤 Владелец: {user.first_name}"
+                admin_text = "🏪 YANGI DO'KON - TEKSHIRISH KERAK\n\n"
+                admin_text += f"👤 Egasi: {user.first_name}"
                 if user.username:
                     admin_text += f" (@{user.username})"
                 admin_text += f"\n📱 ID: {user.telegram_id}"
-                admin_text += f"\n\n📝 Название: {data['shop_name']}"
-                admin_text += f"\n📞 Телефон: {data['phone']}"
-                admin_text += f"\n🏙 Город: {city_name}"
-                admin_text += f"\n📍 Адрес: {data['address']}"
+                admin_text += f"\n\n📝 Nomi: {data['shop_name']}"
+                admin_text += f"\n📞 Telefon: {data['phone']}"
+                admin_text += f"\n🏙 Shahar: {city_name}"
+                admin_text += f"\n📍 Manzil: {data['address']}"
                 
                 # Add location info if exists
                 if data.get('latitude') and data.get('longitude'):
-                    admin_text += f"\n🌐 Координаты: {data['latitude']}, {data['longitude']}"
+                    admin_text += f"\n🌐 Koordinatalar: {data['latitude']}, {data['longitude']}"
                 
-                admin_text += f"\n🚗 Марки: {', '.join(data['brand_names'])}\n"
+                admin_text += f"\n🚗 Brendlar: {', '.join(data['brand_names'])}\n"
                 
                 # Add part categories with hashtags - remove emojis
                 part_cats_ru = data.get('part_categories_ru')
@@ -596,9 +596,9 @@ async def confirm_shop(callback: CallbackQuery, state: FSMContext):
                         return emoji_pattern.sub(r'', text)
                     part_cats_clean = [remove_emoji(cat).strip() for cat in part_cats_ru]
                     part_cats_formatted = ' '.join([f'#{cat.replace(" ", "")}' for cat in part_cats_clean])
-                    admin_text += f"📦 Категории: {part_cats_formatted}\n"
+                    admin_text += f"📦 Qismlar: {part_cats_formatted}\n"
                 
-                admin_text += f"\n🆔 Shop ID: {shop.id}"
+                admin_text += f"\n🆔 Do'kon ID: {shop.id}"
                 
                 # Create approval buttons
                 from aiogram.types import InlineKeyboardButton
@@ -606,8 +606,8 @@ async def confirm_shop(callback: CallbackQuery, state: FSMContext):
                 
                 admin_keyboard = InlineKeyboardBuilder()
                 admin_keyboard.row(
-                    InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_shop_{shop.id}"),
-                    InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_shop_{shop.id}")
+                    InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"approve_shop_{shop.id}"),
+                    InlineKeyboardButton(text="❌ Rad etish", callback_data=f"reject_shop_{shop.id}")
                 )
                 
                 # Send to admin with photo
