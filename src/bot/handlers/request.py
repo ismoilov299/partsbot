@@ -79,13 +79,11 @@ async def process_request_description(message: Message, state: FSMContext):
         if admin_chat_id or group_chat_id:
             try:
                 # Create admin message
-                lang_text = "O'zbekcha" if user.language == 'uz' else 'Русский'
                 admin_text = "🔔 YANGI SO'ROV\n\n"
                 admin_text += f"👤 Kimdan: {user.first_name}"
                 if user.username:
                     admin_text += f" (@{user.username})"
                 admin_text += f"\n📱 ID: {user.telegram_id}"
-                admin_text += f"\n🌐 Til: {lang_text}"
                 admin_text += f"\n\n📝 So'rov:\n{message.text}"
                 admin_text += f"\n\n#sorov_{request.id}"
                 
