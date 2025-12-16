@@ -217,9 +217,9 @@ async def process_skip_location(message: Message, state: FSMContext):
     else:
         # Ask to send location again
         if user.language == 'uz':
-            text = "❌ Iltimos, lokatsiya yuboring yoki 'O'tkazib yuborish' tugmasini bosing"
+            text = "❌ Iltimos, lokatsiya yuboring!"
         else:
-            text = "❌ Пожалуйста, отправьте локацию или нажмите 'Пропустить'"
+            text = "❌ Пожалуйста, отправьте локацию!"
         await message.answer(text)
 
 
