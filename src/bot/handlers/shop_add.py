@@ -185,7 +185,7 @@ async def process_location(message: Message, state: FSMContext):
 
 @router.message(ShopAddStates.share_location)
 async def process_skip_location(message: Message, state: FSMContext):
-    """Handle skip location or cancel"""
+    """Handle cancel or invalid input for location"""
     user = await db.get_user(message.from_user.id)
     
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
@@ -197,30 +197,12 @@ async def process_skip_location(message: Message, state: FSMContext):
         await message.answer(text, reply_markup=ReplyKeyboardRemove())
         return
     
-    # Check if user wants to skip
-    skip_keywords_uz = ["o'tkazib", "otkazib", "skip"]
-    skip_keywords_ru = ["пропустить", "пропуск"]
-    
-    is_skip = any(keyword in message.text.lower() for keyword in skip_keywords_uz + skip_keywords_ru)
-    
-    if is_skip or message.text == "⏭ O'tkazib yuborish" or message.text == "⏭ Пропустить":
-        # Skip location
-        await state.update_data(latitude=None, longitude=None)
-        
-        if user.language == 'uz':
-            text = "5️⃣ Do'kon manzilini kiriting:\n\nMasalan: Chilonzor, 12-kvartal, 5-uy"
-        else:
-            text = "5️⃣ Введите адрес магазина:\n\nНапример: Чиланзар, 12-квартал, дом 5"
-        
-        await message.answer(text, reply_markup=get_cancel_keyboard(user.language))
-        await state.set_state(ShopAddStates.enter_address)
+    # Ask to send location again - location is required
+    if user.language == 'uz':
+        text = "❌ Iltimos, lokatsiya yuboring! Lokatsiya majburiy."
     else:
-        # Ask to send location again
-        if user.language == 'uz':
-            text = "❌ Iltimos, lokatsiya yuboring!"
-        else:
-            text = "❌ Пожалуйста, отправьте локацию!"
-        await message.answer(text)
+        text = "❌ Пожалуйста, отправьте локацию! Локация обязательна."
+    await message.answer(text)
 
 
 @router.message(ShopAddStates.enter_address)
