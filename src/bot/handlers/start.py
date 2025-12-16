@@ -2,7 +2,7 @@
 Start command handler and language selection
 """
 from aiogram import Router, F
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
@@ -11,6 +11,37 @@ from bot.utils import db
 from bot.states import RegistrationStates
 
 router = Router()
+
+
+@router.message(Command("cancel"))
+async def cmd_cancel(message: Message, state: FSMContext):
+    """Handle /cancel command - clear state and return to main menu"""
+    current_state = await state.get_state()
+    
+    if current_state is None:
+        # No active state
+        user = await db.get_user(message.from_user.id)
+        if user:
+            if user.language == 'uz':
+                await message.answer("Hech qanday faol jarayon yo'q.")
+            else:
+                await message.answer("Нет активного процесса.")
+        return
+    
+    # Clear the state
+    await state.clear()
+    
+    user = await db.get_user(message.from_user.id)
+    if user:
+        if user.language == 'uz':
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
+        else:
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        
+        await message.answer(
+            text,
+            reply_markup=get_main_menu_keyboard(user.language)
+        )
 
 
 @router.message(CommandStart())
