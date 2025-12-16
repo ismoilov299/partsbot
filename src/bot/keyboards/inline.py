@@ -211,14 +211,17 @@ def get_location_keyboard(language: str = 'uz') -> ReplyKeyboardMarkup:
     """Get location keyboard with location sharing button"""
     if language == 'uz':
         share_text = "📍 Lokatsiya yuborish"
+        skip_text = "⏭ O'tkazib yuborish"
         cancel_text = Texts.CANCEL_UZ
     else:
         share_text = "📍 Отправить локацию"
+        skip_text = "⏭ Пропустить"
         cancel_text = Texts.CANCEL_RU
     
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=share_text, request_location=True)],
+            [KeyboardButton(text=skip_text)],
             [KeyboardButton(text=cancel_text)]
         ],
         resize_keyboard=True

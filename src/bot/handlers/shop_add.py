@@ -147,10 +147,14 @@ async def process_city(callback: CallbackQuery, state: FSMContext):
     
     if user.language == 'uz':
         text = f"4️⃣ Do'kon lokatsiyasini yuboring:\n\n"
-        text += "📍 'Lokatsiya yuborish' tugmasini bosing yoki o'tkazib yuboring"
+        text += "📍 'Lokatsiya yuborish' tugmasini bosing.\n\n"
+        text += "⚠️ Eslatma: Lokatsiya yuborayotganda tekshirib aniq yuboring. "
+        text += "Lokatsiya yuborish majburiy, sababi sizning do'koningizni mijozlar aniq topib borishi uchun."
     else:
         text = f"4️⃣ Отправьте локацию магазина:\n\n"
-        text += "📍 Нажмите кнопку 'Отправить локацию' или пропустите"
+        text += "📍 Нажмите кнопку 'Отправить локацию'.\n\n"
+        text += "⚠️ Примечание: Проверьте и отправьте точную локацию. "
+        text += "Отправка локации обязательна, чтобы клиенты могли точно найти ваш магазин."
     
     await callback.message.answer(text, reply_markup=get_location_keyboard(user.language))
     await state.set_state(ShopAddStates.share_location)
@@ -199,7 +203,7 @@ async def process_skip_location(message: Message, state: FSMContext):
     
     is_skip = any(keyword in message.text.lower() for keyword in skip_keywords_uz + skip_keywords_ru)
     
-    if is_skip or message.text == "⏩ O'tkazib yuborish" or message.text == "⏩ Пропустить":
+    if is_skip or message.text == "⏭ O'tkazib yuborish" or message.text == "⏭ Пропустить":
         # Skip location
         await state.update_data(latitude=None, longitude=None)
         
