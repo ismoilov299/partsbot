@@ -14,7 +14,7 @@ sys.path.insert(0, project_root)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.django_app.settings')
 django.setup()
 
-from src.django_app.models import User, City, CarBrand, Shop, Request
+from src.django_app.models import User, City, CarBrand, Shop, UstaXona, Request
 from asgiref.sync import sync_to_async
 
 
@@ -89,6 +89,15 @@ class DatabaseManager:
     def search_shops(city_id: int, car_brand_id: int = None) -> List[Shop]:
         """Search shops by city and optionally by car brand"""
         query = Shop.objects.filter(city_id=city_id, is_active=True, is_approved=True)
+        if car_brand_id:
+            query = query.filter(car_brands__id=car_brand_id)
+        return list(query.select_related('city', 'owner').prefetch_related('car_brands'))
+    
+    @staticmethod
+    @sync_to_async
+    def search_usta_xonalar(city_id: int, car_brand_id: int = None) -> List[UstaXona]:
+        """Search usta xonalar by city and optionally by car brand"""
+        query = UstaXona.objects.filter(city_id=city_id, is_active=True, is_approved=True)
         if car_brand_id:
             query = query.filter(car_brands__id=car_brand_id)
         return list(query.select_related('city', 'owner').prefetch_related('car_brands'))

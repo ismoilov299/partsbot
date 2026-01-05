@@ -89,6 +89,34 @@ class Shop(models.Model):
         return f"{self.name} - {self.city.name_uz}"
 
 
+class UstaXona(models.Model):
+    """Usta Xona (Service Center) model"""
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='usta_xonalar')
+    name = models.CharField(max_length=255)
+    city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='usta_xonalar')
+    car_brands = models.ManyToManyField(CarBrand, related_name='usta_xonalar')
+    phone = models.CharField(max_length=20)
+    address = models.TextField(null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True, help_text='Service center latitude')
+    longitude = models.FloatField(null=True, blank=True, help_text='Service center longitude')
+    photo_file_id = models.CharField(max_length=255, null=True, blank=True, help_text='Telegram photo file ID')
+    description = models.TextField(null=True, blank=True)
+    service_types_uz = models.JSONField(null=True, blank=True, help_text='Service types in Uzbek')
+    service_types_ru = models.JSONField(null=True, blank=True, help_text='Service types in Russian')
+    is_approved = models.BooleanField(default=False, help_text='Admin approved')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'usta_xonalar'
+        verbose_name = 'Usta Xona'
+        verbose_name_plural = 'Usta Xonalar'
+
+    def __str__(self):
+        return f"{self.name} - {self.city.name_uz}"
+
+
 class Request(models.Model):
     """User request model"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests')

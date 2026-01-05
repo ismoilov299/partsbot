@@ -58,12 +58,13 @@ async def create_bot():
     dp = Dispatcher(storage=storage)
     
     # Import and register routers
-    from bot.handlers import start, search, shop_add, request, admin
+    from bot.handlers import start, search, shop_add, usta_xona_add, request, admin
     
     # Register routers in priority order (specific handlers first, catch-all last)
     dp.include_router(admin.router)
     dp.include_router(search.router)
     dp.include_router(shop_add.router)
+    dp.include_router(usta_xona_add.router)
     dp.include_router(request.router)
     dp.include_router(start.router)  # Must be last - has catch-all handler
     

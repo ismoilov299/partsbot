@@ -30,6 +30,20 @@ class ShopAddStates(StatesGroup):
     confirm = State()
 
 
+class UstaXonaAddStates(StatesGroup):
+    """States for adding a service center (usta xona)"""
+    enter_service_name = State()
+    enter_phone = State()
+    choose_city = State()
+    share_location = State()
+    enter_address = State()
+    upload_photo = State()
+    choose_brands = State()
+    choose_service_types = State()
+    enter_description = State()
+    confirm = State()
+
+
 class RequestStates(StatesGroup):
     """States for leaving a request"""
     enter_description = State()

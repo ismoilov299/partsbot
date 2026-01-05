@@ -214,8 +214,10 @@ async def process_city_selection(callback: CallbackQuery, state: FSMContext):
         # Just send back button for shops found case
         if user.language == 'uz':
             back_text = "⬆️ Yuqorida topilgan do'konlar"
+            keyboard.row(InlineKeyboardButton(text="🔧 Usta xonalar ham kerak bo'ladimi?", callback_data="ask_usta_xona"))
         else:
             back_text = "⬆️ Найденные магазины выше"
+            keyboard.row(InlineKeyboardButton(text="🔧 Нужны ли также сервисы?", callback_data="ask_usta_xona"))
         
         await callback.message.answer(
             back_text,

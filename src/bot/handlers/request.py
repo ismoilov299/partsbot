@@ -13,6 +13,25 @@ from bot.states import RequestStates
 router = Router()
 
 
+@router.message(Command("cancel"), StateFilter(RequestStates))
+async def cmd_cancel_request(message: Message, state: FSMContext):
+    """Handle /cancel command during request process"""
+    await state.clear()
+    user = await db.get_user(message.from_user.id)
+    
+    if user:
+        if user.language == 'uz':
+            text = "❌ So'rov qoldirish bekor qilindi.\n\nAsosiy menyuga qaytildi."
+        else:
+            text = "❌ Отправка запроса отменена.\n\nВозврат в главное меню."
+        
+        from bot.keyboards import get_main_menu_keyboard
+        await message.answer(
+            text,
+            reply_markup=get_main_menu_keyboard(user.language)
+        )
+
+
 @router.callback_query(F.data == "leave_request")
 async def leave_request_start(callback: CallbackQuery, state: FSMContext):
     """Start request leaving process - ask for description"""

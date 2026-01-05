@@ -19,6 +19,8 @@ class Texts:
     SHOP_SEARCH_RU = "🔍 Поиск магазина"
     SHOP_ADD_UZ = "➕ Do'kon kiritish"
     SHOP_ADD_RU = "➕ Добавить магазин"
+    USTA_XONA_ADD_UZ = "🔧 Usta xona kiritish"
+    USTA_XONA_ADD_RU = "🔧 Добавить сервис"
     
     # Shop search
     SEARCH_BY_MODEL_UZ = "🚗 Model bo'yicha qidirish"
@@ -74,9 +76,11 @@ def get_main_menu_keyboard(language: str = 'uz') -> InlineKeyboardMarkup:
     if language == 'uz':
         keyboard.row(InlineKeyboardButton(text=Texts.SHOP_SEARCH_UZ, callback_data="shop_search"))
         keyboard.row(InlineKeyboardButton(text=Texts.SHOP_ADD_UZ, callback_data="shop_add"))
+        keyboard.row(InlineKeyboardButton(text=Texts.USTA_XONA_ADD_UZ, callback_data="usta_xona_add"))
     else:
         keyboard.row(InlineKeyboardButton(text=Texts.SHOP_SEARCH_RU, callback_data="shop_search"))
         keyboard.row(InlineKeyboardButton(text=Texts.SHOP_ADD_RU, callback_data="shop_add"))
+        keyboard.row(InlineKeyboardButton(text=Texts.USTA_XONA_ADD_RU, callback_data="usta_xona_add"))
     
     return keyboard.as_markup()
 
