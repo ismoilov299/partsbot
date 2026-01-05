@@ -191,4 +191,21 @@ class DatabaseManager:
 
 
 # Global instance
-db = DatabaseManager()
+_db_manager = DatabaseManager()
+
+# Expose all methods at module level for easier imports
+get_or_create_user = _db_manager.get_or_create_user
+update_user_language = _db_manager.update_user_language
+get_user = _db_manager.get_user
+get_all_cities = _db_manager.get_all_cities
+get_city = _db_manager.get_city
+get_car_brand_by_order = _db_manager.get_car_brand_by_order
+search_shops = _db_manager.search_shops
+search_usta_xonalar = _db_manager.search_usta_xonalar
+create_shop = _db_manager.create_shop
+create_request = _db_manager.create_request
+get_all_car_brands = _db_manager.get_all_car_brands
+get_car_brand = _db_manager.get_car_brand
+get_shop_by_id = _db_manager.get_shop_by_id
+approve_shop = _db_manager.approve_shop
+reject_shop = _db_manager.reject_shop
