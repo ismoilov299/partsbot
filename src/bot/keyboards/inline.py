@@ -57,6 +57,16 @@ class Texts:
         {"uz": "⚡️ Elektronika", "ru": "⚡️ Электроника"},
         {"uz": "📦 Boshqalar", "ru": "📦 Другие"},
     ]
+    
+    # Service types for usta xona
+    SERVICE_TYPES = [
+        {"uz": "🔧 Ta'mirlash", "ru": "🔧 Ремонт"},
+        {"uz": "🛠 Texservis", "ru": "🛠 Техсервис"},
+        {"uz": "🚗 Diagnostika", "ru": "🚗 Диагностика"},
+        {"uz": "🎨 Bo'yoq", "ru": "🎨 Покраска"},
+        {"uz": "⚡️ Elektrik", "ru": "⚡️ Электрика"},
+        {"uz": "🔩 Slesar", "ru": "🔩 Слесарь"},
+    ]
 
 
 def get_language_keyboard() -> InlineKeyboardMarkup:

@@ -1,2 +1,0 @@
-# Handlers Package
-from . import start, search, shop_add, usta_xona_add, request, admin

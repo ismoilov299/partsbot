@@ -7,7 +7,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from bot.keyboards import get_language_keyboard, get_main_menu_keyboard, Texts
-from bot.utils import db
+from bot.utils import database as db
 from bot.states import RegistrationStates
 
 router = Router()

@@ -11,7 +11,7 @@ from bot.keyboards import (
     get_cities_keyboard,
     Texts
 )
-from bot.utils import db
+from bot.utils import database as db
 from bot.states import ShopSearchStates
 
 router = Router()
@@ -261,4 +261,76 @@ async def back_to_brands(callback: CallbackQuery, state: FSMContext):
         reply_markup=get_car_brands_keyboard(user.language)
     )
     await state.set_state(ShopSearchStates.choose_brand)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "ask_usta_xona")
+async def ask_usta_xona(callback: CallbackQuery, state: FSMContext):
+    """Ask if user needs usta xona too"""
+    user = await db.get_user(callback.from_user.id)
+    
+    if user.language == 'uz':
+        text = "🔧 Sizga usta xonalar ham kerakmi?\n\n"
+        text += "Usta xonalar - avtomobil ta'mirlash xizmatlari:\n"
+        text += "• 🔧 Ta'mirlash\n"
+        text += "• 🛠 Texservis\n"  
+        text += "• 🚗 Diagnostika"
+    else:
+        text = "🔧 Нужны ли вам также сервисы?\n\n"
+        text += "Сервисы - услуги по ремонту автомобилей:\n"
+        text += "• 🔧 Ремонт\n"
+        text += "• 🛠 Техсервис\n"
+        text += "• 🚗 Диагностика"
+    
+    from aiogram.types import InlineKeyboardButton
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    
+    keyboard = InlineKeyboardBuilder()
+    if user.language == 'uz':
+        keyboard.row(InlineKeyboardButton(text="✅ Ha, kerak", callback_data="search_usta_xona_yes"))
+        keyboard.row(InlineKeyboardButton(text="❌ Yo'q", callback_data="search_usta_xona_no"))
+    else:
+        keyboard.row(InlineKeyboardButton(text="✅ Да, нужны", callback_data="search_usta_xona_yes"))
+        keyboard.row(InlineKeyboardButton(text="❌ Нет", callback_data="search_usta_xona_no"))
+    
+    await callback.message.answer(text, reply_markup=keyboard.as_markup())
+    await callback.answer()
+
+
+@router.callback_query(F.data == "search_usta_xona_yes")
+async def search_usta_xona_yes(callback: CallbackQuery, state: FSMContext):
+    """Show usta xonalar after shop results"""
+    # Get the same search parameters from callback message
+    # For now, we'll ask user to search again with brands and city
+    user = await db.get_user(callback.from_user.id)
+    brands = await db.get_all_car_brands()
+    
+    # Filter out "Barchasi" / "Vse" from search brands
+    brands = [b for b in brands if b.name_uz != 'Barchasi' and b.name_ru != 'Vse']
+    
+    if user.language == 'uz':
+        text = "🔧 Usta xonalar qidirish\n\nAvtomobil markasini tanlang:"
+    else:
+        text = "🔧 Поиск сервисов\n\nВыберите марку автомобиля:"
+    
+    await callback.message.answer(
+        text,
+        reply_markup=get_car_brands_keyboard(user.language, brands)
+    )
+    await state.set_state(ShopSearchStates.choose_brand)
+    await state.update_data(search_type="usta_xona")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "search_usta_xona_no")
+async def search_usta_xona_no(callback: CallbackQuery, state: FSMContext):
+    """User doesn't need usta xona"""
+    user = await db.get_user(callback.from_user.id)
+    
+    if user.language == 'uz':
+        text = "👍 Tushunarli. Agar kerak bo'lsa, qayta qidirishingiz mumkin."
+    else:
+        text = "👍 Понятно. Если потребуется, можете найти через поиск."
+    
+    await callback.message.answer(text)
     await callback.answer()

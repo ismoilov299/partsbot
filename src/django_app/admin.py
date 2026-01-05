@@ -2,7 +2,7 @@
 Django admin configuration
 """
 from django.contrib import admin
-from .models import User, City, CarBrand, Shop, Request
+from .models import User, City, CarBrand, Shop, UstaXona, Request
 
 
 @admin.register(User)
@@ -42,4 +42,13 @@ class RequestAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'car_brand', 'city', 'status', 'created_at']
     list_filter = ['status', 'car_brand', 'city', 'created_at']
     search_fields = ['description', 'phone', 'user__first_name']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(UstaXona)
+class UstaXonaAdmin(admin.ModelAdmin):
+    list_display = ['name', 'owner', 'city', 'phone', 'is_approved', 'is_active', 'created_at']
+    list_filter = ['is_approved', 'is_active', 'city', 'created_at']
+    search_fields = ['name', 'phone', 'address', 'owner__first_name']
+    filter_horizontal = ['car_brands']
     readonly_fields = ['created_at', 'updated_at']

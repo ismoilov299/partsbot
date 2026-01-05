@@ -10,7 +10,7 @@ import django
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.django_app.settings')
 django.setup()
 
 from django_app.models import City, CarBrand

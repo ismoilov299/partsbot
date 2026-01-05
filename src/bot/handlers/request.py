@@ -5,9 +5,10 @@ import os
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command, StateFilter
 
 from bot.keyboards import get_cancel_keyboard, get_phone_keyboard, Texts
-from bot.utils import db
+from bot.utils import database as db
 from bot.states import RequestStates
 
 router = Router()

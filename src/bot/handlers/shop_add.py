@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 
 from bot.keyboards import get_cities_keyboard, get_car_brands_keyboard, Texts, get_cancel_keyboard, get_phone_keyboard, get_location_keyboard, get_part_categories_keyboard
-from bot.utils import db
+from bot.utils import database as db
 from bot.states import ShopAddStates
 
 router = Router()

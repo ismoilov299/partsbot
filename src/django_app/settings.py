@@ -50,6 +50,7 @@ JAZZMIN_SETTINGS = {
         "src.django_app.City": "fas fa-city",
         "src.django_app.CarBrand": "fas fa-car",
         "src.django_app.Shop": "fas fa-store",
+        "src.django_app.UstaXona": "fas fa-wrench",
         "src.django_app.Request": "fas fa-envelope",
     },
     

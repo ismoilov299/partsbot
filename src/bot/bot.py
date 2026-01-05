@@ -18,7 +18,7 @@ env_path = os.path.join(PROJECT_ROOT, '.env')
 load_dotenv(dotenv_path=env_path)
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_app.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.django_app.settings')
 import django
 django.setup()
 
@@ -59,11 +59,12 @@ async def create_bot():
     
     # Import and register routers
     from bot.handlers import start, search, shop_add, request, admin
+    from bot.handlers import usta_xona_add
     
     # Register routers in priority order (specific handlers first, catch-all last)
     dp.include_router(admin.router)
     dp.include_router(search.router)
-    dp.include_router(shop_add.router)
+    dp.include_router(usta_xona_add.router)
     dp.include_router(request.router)
     dp.include_router(start.router)  # Must be last - has catch-all handler
     

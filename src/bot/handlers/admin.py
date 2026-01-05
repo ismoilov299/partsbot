@@ -5,7 +5,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 
-from bot.utils import db
+from bot.utils import database as db
 from bot.states.user_states import AdminStates
 
 router = Router()
