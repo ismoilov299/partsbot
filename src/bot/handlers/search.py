@@ -1,6 +1,7 @@
 """
 Shop search handlers
 """
+import logging
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -15,11 +16,13 @@ from bot.utils import database as db
 from bot.states import ShopSearchStates
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == "usta_xona_search")
 async def usta_xona_search_start(callback: CallbackQuery, state: FSMContext):
     """Start usta xona search"""
+    logger.info(f"User {callback.from_user.id} started usta xona search")
     user = await db.get_user(callback.from_user.id)
     brands = await db.get_all_car_brands()
     
@@ -130,8 +133,11 @@ async def process_city_selection(callback: CallbackQuery, state: FSMContext):
     
     # Check if searching for usta xona or shop
     if search_type == "usta_xona":
+        logger.info(f"User {callback.from_user.id} searching usta xona: brand_id={brand_id}, city_id={city_id}")
         # Search usta xonalar
         usta_xonalar = await db.search_usta_xonalar(city_id, brand_id)
+        
+        logger.info(f"Found {len(usta_xonalar)} usta xonalar for user {callback.from_user.id}")
         
         if usta_xonalar:
             if user.language == 'uz':
@@ -177,6 +183,7 @@ async def process_city_selection(callback: CallbackQuery, state: FSMContext):
             
             await callback.message.answer(final_text)
         else:
+            logger.warning(f"No usta xonalar found for user {callback.from_user.id}: brand_id={brand_id}, city_id={city_id}")
             if user.language == 'uz':
                 result_text = f"❌ {city.name_uz} shahrida {brand_name} uchun usta xonalar topilmadi."
             else:
@@ -393,6 +400,7 @@ async def ask_usta_xona(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "search_usta_xona_yes")
 async def search_usta_xona_yes(callback: CallbackQuery, state: FSMContext):
     """Show usta xonalar using same search parameters"""
+    logger.info(f"User {callback.from_user.id} requested usta xona after shop search")
     user = await db.get_user(callback.from_user.id)
     data = await state.get_data()
     
@@ -400,6 +408,8 @@ async def search_usta_xona_yes(callback: CallbackQuery, state: FSMContext):
     brand_id = data.get('last_search_brand_id')
     city_name = data.get('last_search_city_name', '')
     brand_name = data.get('last_search_brand_name', '')
+    
+    logger.info(f"Using saved search params: brand_id={brand_id}, city_id={city_id}")
     
     if not city_id or not brand_id:
         # Fallback: ask to search again
@@ -421,7 +431,10 @@ async def search_usta_xona_yes(callback: CallbackQuery, state: FSMContext):
         return
     
     # Search usta xonalar with same params
+    logger.info(f"Searching usta xonalar with saved params for user {callback.from_user.id}")
     usta_xonalar = await db.search_usta_xonalar(city_id, brand_id)
+    
+    logger.info(f"Found {len(usta_xonalar)} usta xonalar from saved search")
     
     if usta_xonalar:
         if user.language == 'uz':
