@@ -13,7 +13,7 @@ from bot.states import RegistrationStates
 router = Router()
 
 
-@router.message(Command("cancel"))
+@router.message(Command("cancel"),state="*")
 async def cmd_cancel(message: Message, state: FSMContext):
     """Handle /cancel command - clear state and return to main menu"""
     current_state = await state.get_state()
