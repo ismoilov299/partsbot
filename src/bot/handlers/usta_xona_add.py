@@ -1,6 +1,7 @@
 """
 Usta Xona add handlers - service center registration
 """
+import logging
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
@@ -14,11 +15,13 @@ from bot.utils import database as db
 from bot.states import UstaXonaAddStates
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == "usta_xona_add")
 async def usta_xona_add_start(callback: CallbackQuery, state: FSMContext):
     """Start usta xona registration process"""
+    logger.info(f"User {callback.from_user.id} started usta xona registration")
     user = await db.get_user(callback.from_user.id)
     
     if user.language == 'uz':
@@ -34,6 +37,7 @@ async def usta_xona_add_start(callback: CallbackQuery, state: FSMContext):
 @router.message(UstaXonaAddStates.enter_service_name)
 async def process_service_name(message: Message, state: FSMContext):
     """Process service name input"""
+    logger.info(f"User {message.from_user.id} entered service name: {message.text}")
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
@@ -56,6 +60,7 @@ async def process_service_name(message: Message, state: FSMContext):
 @router.message(UstaXonaAddStates.enter_phone, F.contact)
 async def process_phone_contact(message: Message, state: FSMContext):
     """Process phone number from contact"""
+    logger.info(f"User {message.from_user.id} shared contact")
     phone = message.contact.phone_number
     if not phone.startswith('+'):
         phone = '+' + phone
@@ -114,6 +119,7 @@ async def process_phone_text(message: Message, state: FSMContext):
 async def process_city(callback: CallbackQuery, state: FSMContext):
     """Process city selection"""
     city_id = int(callback.data.split("_")[1])
+    logger.info(f"User {callback.from_user.id} selected city: {city_id}")
     await state.update_data(city_id=city_id)
     
     user = await db.get_user(callback.from_user.id)
@@ -134,6 +140,7 @@ async def process_city(callback: CallbackQuery, state: FSMContext):
 @router.message(UstaXonaAddStates.share_location, F.location)
 async def process_location(message: Message, state: FSMContext):
     """Process location sharing"""
+    logger.info(f"User {message.from_user.id} shared location: {message.location.latitude}, {message.location.longitude}")
     await state.update_data(
         latitude=message.location.latitude,
         longitude=message.location.longitude
@@ -197,6 +204,7 @@ async def process_address(message: Message, state: FSMContext):
 @router.message(UstaXonaAddStates.upload_photo, F.photo)
 async def process_photo(message: Message, state: FSMContext):
     """Process photo upload"""
+    logger.info(f"User {message.from_user.id} uploaded photo")
     photo_file_id = message.photo[-1].file_id
     await state.update_data(photo_file_id=photo_file_id)
     
@@ -244,6 +252,7 @@ async def skip_photo(message: Message, state: FSMContext):
 async def process_brand(callback: CallbackQuery, state: FSMContext):
     """Process brand selection"""
     brand_id = int(callback.data.split("_")[1])
+    logger.info(f"User {callback.from_user.id} selected brand: {brand_id}")
     data = await state.get_data()
     
     # Store brand IDs
@@ -281,9 +290,18 @@ async def process_description(message: Message, state: FSMContext):
     data = await state.get_data()
     user = await db.get_user(message.from_user.id)
     
+    logger.info(f"User {message.from_user.id} submitting usta xona:")
+    logger.info(f"  - Name: {data.get('service_name')}")
+    logger.info(f"  - City ID: {data.get('city_id')}")
+    logger.info(f"  - Phone: {data.get('phone')}")
+    logger.info(f"  - Address: {data.get('address')}")
+    logger.info(f"  - Brands: {data.get('brand_ids', [])}")
+    logger.info(f"  - Has photo: {bool(data.get('photo_file_id'))}")
+    logger.info(f"  - Has location: {bool(data.get('latitude'))}")
+    
     # Create usta xona in database
     try:
-        await db.create_usta_xona(
+        usta_xona = await db.create_usta_xona(
             owner_id=message.from_user.id,
             name=data['service_name'],
             city_id=data['city_id'],
@@ -296,6 +314,8 @@ async def process_description(message: Message, state: FSMContext):
             longitude=data.get('longitude')
         )
         
+        logger.info(f"Usta xona created successfully for user {message.from_user.id}, ID: {usta_xona.id}")
+        
         if user.language == 'uz':
             text = "✅ Usta xona muvaffaqiyatli qo'shildi!\n\nAdmin tasdiqlashini kuting."
         else:
@@ -307,6 +327,7 @@ async def process_description(message: Message, state: FSMContext):
         await message.answer(menu_text, reply_markup=get_main_menu_keyboard(user.language))
         
     except Exception as e:
+        logger.error(f"Error creating usta xona for user {message.from_user.id}: {str(e)}", exc_info=True)
         if user.language == 'uz':
             text = f"❌ Xatolik yuz berdi: {str(e)}"
         else:
