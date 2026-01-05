@@ -224,7 +224,14 @@ async def process_city_selection(callback: CallbackQuery, state: FSMContext):
             reply_markup=keyboard.as_markup()
         )
     
-    await state.clear()
+    # Save search params for potential usta xona search
+    await state.update_data(
+        last_search_city_id=city_id,
+        last_search_brand_id=brand_id,
+        last_search_city_name=city.name_uz if user.language == 'uz' else city.name_ru,
+        last_search_brand_name=brand_name
+    )
+    
     await callback.answer()
 
 
@@ -299,26 +306,124 @@ async def ask_usta_xona(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "search_usta_xona_yes")
 async def search_usta_xona_yes(callback: CallbackQuery, state: FSMContext):
-    """Show usta xonalar after shop results"""
-    # Get the same search parameters from callback message
-    # For now, we'll ask user to search again with brands and city
+    """Show usta xonalar using same search parameters"""
     user = await db.get_user(callback.from_user.id)
-    brands = await db.get_all_car_brands()
+    data = await state.get_data()
     
-    # Filter out "Barchasi" / "Vse" from search brands
-    brands = [b for b in brands if b.name_uz != 'Barchasi' and b.name_ru != 'Vse']
+    city_id = data.get('last_search_city_id')
+    brand_id = data.get('last_search_brand_id')
+    city_name = data.get('last_search_city_name', '')
+    brand_name = data.get('last_search_brand_name', '')
     
-    if user.language == 'uz':
-        text = "🔧 Usta xonalar qidirish\n\nAvtomobil markasini tanlang:"
+    if not city_id or not brand_id:
+        # Fallback: ask to search again
+        brands = await db.get_all_car_brands()
+        brands = [b for b in brands if b.name_uz != 'Barchasi' and b.name_ru != 'Vse']
+        
+        if user.language == 'uz':
+            text = "🔧 Usta xonalar qidirish\n\nAvtomobil markasini tanlang:"
+        else:
+            text = "🔧 Поиск сервисов\n\nВыберите марку автомобиля:"
+        
+        await callback.message.answer(
+            text,
+            reply_markup=get_car_brands_keyboard(user.language, brands)
+        )
+        await state.set_state(ShopSearchStates.choose_brand)
+        await state.update_data(search_type="usta_xona")
+        await callback.answer()
+        return
+    
+    # Search usta xonalar with same params
+    usta_xonalar = await db.search_usta_xonalar(city_id, brand_id)
+    
+    if usta_xonalar:
+        if user.language == 'uz':
+            header_text = f"✅ {city_name} shahrida {brand_name} uchun {len(usta_xonalar)} ta usta xona topildi:\n\n"
+        else:
+            header_text = f"✅ Найдено {len(usta_xonalar)} сервисов для {brand_name} в городе {city_name}:\n\n"
+        
+        await callback.message.answer(header_text)
+        
+        # Send each usta xona with photo and location
+        for i, usta_xona in enumerate(usta_xonalar, 1):
+            usta_text = f"{i}. 🔧 {usta_xona.name}\n"
+            usta_text += f"📞 {usta_xona.phone}\n"
+            if usta_xona.address:
+                usta_text += f"📍 {usta_xona.address}\n"
+            if usta_xona.description:
+                usta_text += f"ℹ️ {usta_xona.description}\n"
+            
+            # Add service types with hashtags if available
+            if user.language == 'uz' and usta_xona.service_types_uz:
+                import re
+                def remove_emoji(text):
+                    emoji_pattern = re.compile("["
+                        u"\U0001F600-\U0001F64F"
+                        u"\U0001F300-\U0001F5FF"
+                        u"\U0001F680-\U0001F6FF"
+                        u"\U0001F1E0-\U0001F1FF"
+                        u"\U00002702-\U000027B0"
+                        u"\U000024C2-\U0001F251"
+                        "]+", flags=re.UNICODE)
+                    return emoji_pattern.sub(r'', text)
+                service_types_clean = [remove_emoji(cat).strip() for cat in usta_xona.service_types_uz]
+                service_types_formatted = ' '.join([f'#{cat.replace(" ", "")}' for cat in service_types_clean])
+                usta_text += f"🛠 {service_types_formatted}\n"
+            elif user.language == 'ru' and usta_xona.service_types_ru:
+                import re
+                def remove_emoji(text):
+                    emoji_pattern = re.compile("["
+                        u"\U0001F600-\U0001F64F"
+                        u"\U0001F300-\U0001F5FF"
+                        u"\U0001F680-\U0001F6FF"
+                        u"\U0001F1E0-\U0001F1FF"
+                        u"\U00002702-\U000027B0"
+                        u"\U000024C2-\U0001F251"
+                        "]+", flags=re.UNICODE)
+                    return emoji_pattern.sub(r'', text)
+                service_types_clean = [remove_emoji(cat).strip() for cat in usta_xona.service_types_ru]
+                service_types_formatted = ' '.join([f'#{cat.replace(" ", "")}' for cat in service_types_clean])
+                usta_text += f"🛠 {service_types_formatted}\n"
+            
+            # Try to send photo if exists
+            if usta_xona.photo_file_id:
+                try:
+                    await callback.message.answer_photo(
+                        photo=usta_xona.photo_file_id,
+                        caption=usta_text
+                    )
+                except Exception:
+                    # If photo fails, send text only
+                    await callback.message.answer(usta_text)
+            else:
+                await callback.message.answer(usta_text)
+            
+            # Send location if exists
+            if usta_xona.latitude and usta_xona.longitude:
+                try:
+                    await callback.message.answer_location(
+                        latitude=usta_xona.latitude,
+                        longitude=usta_xona.longitude
+                    )
+                except Exception:
+                    pass
+        
+        if user.language == 'uz':
+            final_text = "⬆️ Yuqorida topilgan usta xonalar"
+        else:
+            final_text = "⬆️ Найденные сервисы выше"
+        
+        await callback.message.answer(final_text)
     else:
-        text = "🔧 Поиск сервисов\n\nВыберите марку автомобиля:"
+        if user.language == 'uz':
+            result_text = f"❌ {city_name} shahrida {brand_name} uchun usta xonalar topilmadi."
+        else:
+            result_text = f"❌ Сервисы для {brand_name} в городе {city_name} не найдены."
+        
+        await callback.message.answer(result_text)
     
-    await callback.message.answer(
-        text,
-        reply_markup=get_car_brands_keyboard(user.language, brands)
-    )
-    await state.set_state(ShopSearchStates.choose_brand)
-    await state.update_data(search_type="usta_xona")
+    await state.clear()
     await callback.answer()
 
 
