@@ -188,6 +188,33 @@ class DatabaseManager:
             return True
         except Exception:
             return False
+    
+    @staticmethod
+    @sync_to_async
+    def create_usta_xona(owner_id: int, name: str, city_id: int, 
+                        phone: str, address: str = None, 
+                        description: str = None, car_brand_ids: List[int] = None,
+                        photo_file_id: str = None, latitude: float = None,
+                        longitude: float = None, service_types_uz: List[str] = None,
+                        service_types_ru: List[str] = None) -> UstaXona:
+        """Create a new usta xona (service center)"""
+        owner = User.objects.get(telegram_id=owner_id)
+        usta_xona = UstaXona.objects.create(
+            owner=owner,
+            name=name,
+            city_id=city_id,
+            phone=phone,
+            address=address,
+            description=description,
+            photo_file_id=photo_file_id,
+            latitude=latitude,
+            longitude=longitude,
+            service_types_uz=service_types_uz,
+            service_types_ru=service_types_ru
+        )
+        if car_brand_ids:
+            usta_xona.car_brands.set(car_brand_ids)
+        return usta_xona
 
 
 # Global instance
@@ -203,6 +230,7 @@ get_car_brand_by_order = _db_manager.get_car_brand_by_order
 search_shops = _db_manager.search_shops
 search_usta_xonalar = _db_manager.search_usta_xonalar
 create_shop = _db_manager.create_shop
+create_usta_xona = _db_manager.create_usta_xona
 create_request = _db_manager.create_request
 get_all_car_brands = _db_manager.get_all_car_brands
 get_car_brand = _db_manager.get_car_brand

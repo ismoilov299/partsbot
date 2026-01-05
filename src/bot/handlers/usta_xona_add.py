@@ -5,7 +5,11 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 
-from bot.keyboards import get_cancel_keyboard, get_phone_keyboard, Texts
+from bot.keyboards import (
+    get_cancel_keyboard, get_phone_keyboard, get_location_keyboard,
+    get_cities_keyboard, get_car_brands_keyboard, Texts
+)
+from bot.keyboards.inline import get_main_menu_keyboard
 from bot.utils import database as db
 from bot.states import UstaXonaAddStates
 
@@ -14,12 +18,13 @@ router = Router()
 
 @router.callback_query(F.data == "usta_xona_add")
 async def usta_xona_add_start(callback: CallbackQuery, state: FSMContext):
+    """Start usta xona registration process"""
     user = await db.get_user(callback.from_user.id)
     
     if user.language == 'uz':
-        text = "Usta xona qo'shish\n\nUsta xona nomini kiriting:"
+        text = "🔧 Usta xona qo'shish\n\n1️⃣ Usta xona nomini kiriting:"
     else:
-        text = "Dobavlenie servisa\n\nVvedite nazvanie servisa:"
+        text = "🔧 Добавление сервиса\n\n1️⃣ Введите название сервиса:"
     
     await callback.message.answer(text, reply_markup=get_cancel_keyboard(user.language))
     await state.set_state(UstaXonaAddStates.enter_service_name)
@@ -28,10 +33,11 @@ async def usta_xona_add_start(callback: CallbackQuery, state: FSMContext):
 
 @router.message(UstaXonaAddStates.enter_service_name)
 async def process_service_name(message: Message, state: FSMContext):
+    """Process service name input"""
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
-        text = "Bekor qilindi" if user.language == 'uz' else "Otmeneno"
+        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
         await message.answer(text, reply_markup=ReplyKeyboardRemove())
         return
     
@@ -39,9 +45,9 @@ async def process_service_name(message: Message, state: FSMContext):
     user = await db.get_user(message.from_user.id)
     
     if user.language == 'uz':
-        text = "Telefon raqamingizni kiriting yoki tugmani bosing:\n\nMasalan: +998901234567"
+        text = "2️⃣ Telefon raqamingizni kiriting yoki tugmani bosing:\n\nMasalan: +998901234567"
     else:
-        text = "Vvedite nomer telefona ili nazhmite knopku:\n\nNaprimer: +998901234567"
+        text = "2️⃣ Введите номер телефона или нажмите кнопку:\n\nНапример: +998901234567"
     
     await message.answer(text, reply_markup=get_phone_keyboard(user.language))
     await state.set_state(UstaXonaAddStates.enter_phone)
@@ -49,32 +55,36 @@ async def process_service_name(message: Message, state: FSMContext):
 
 @router.message(UstaXonaAddStates.enter_phone, F.contact)
 async def process_phone_contact(message: Message, state: FSMContext):
+    """Process phone number from contact"""
     phone = message.contact.phone_number
     if not phone.startswith('+'):
         phone = '+' + phone
     
-    data = await state.get_data()
+    await state.update_data(phone=phone)
     user = await db.get_user(message.from_user.id)
     
+    # Get cities for selection
+    cities = await db.get_all_cities()
+    
     if user.language == 'uz':
-        text = f"Ma'lumotlar qabul qilindi!\n\nNomi: {data['service_name']}\nTelefon: {phone}\n\nAdmin tasdiqlaydi."
+        text = "3️⃣ Shaharni tanlang:"
     else:
-        text = f"Dannye prinyaty!\n\nNazvanie: {data['service_name']}\nTelefon: {phone}\n\nAdmin podtverdit."
+        text = "3️⃣ Выберите город:"
     
-    await message.answer(text, reply_markup=ReplyKeyboardRemove())
-    
-    from bot.keyboards.inline import get_main_menu_keyboard
-    menu_text = "Asosiy menyu:" if user.language == 'uz' else "Glavnoe menyu:"
-    await message.answer(menu_text, reply_markup=get_main_menu_keyboard(user.language))
-    await state.clear()
+    await message.answer(
+        text,
+        reply_markup=get_cities_keyboard(cities, user.language)
+    )
+    await state.set_state(UstaXonaAddStates.choose_city)
 
 
 @router.message(UstaXonaAddStates.enter_phone, F.text)
 async def process_phone_text(message: Message, state: FSMContext):
+    """Process phone number from text"""
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
-        text = "Bekor qilindi" if user.language == 'uz' else "Otmeneno"
+        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
         await message.answer(text, reply_markup=ReplyKeyboardRemove())
         return
     
@@ -82,17 +92,227 @@ async def process_phone_text(message: Message, state: FSMContext):
     if not phone.startswith('+'):
         phone = '+' + phone
     
-    data = await state.get_data()
+    await state.update_data(phone=phone)
+    user = await db.get_user(message.from_user.id)
+    
+    # Get cities for selection
+    cities = await db.get_all_cities()
+    
+    if user.language == 'uz':
+        text = "3️⃣ Shaharni tanlang:"
+    else:
+        text = "3️⃣ Выберите город:"
+    
+    await message.answer(
+        text,
+        reply_markup=get_cities_keyboard(cities, user.language)
+    )
+    await state.set_state(UstaXonaAddStates.choose_city)
+
+
+@router.callback_query(UstaXonaAddStates.choose_city, F.data.startswith("city_"))
+async def process_city(callback: CallbackQuery, state: FSMContext):
+    """Process city selection"""
+    city_id = int(callback.data.split("_")[1])
+    await state.update_data(city_id=city_id)
+    
+    user = await db.get_user(callback.from_user.id)
+    
+    if user.language == 'uz':
+        text = "4️⃣ Lokatsiyani yuboring yoki manzilni yozing:"
+    else:
+        text = "4️⃣ Отправьте локацию или напишите адрес:"
+    
+    await callback.message.answer(
+        text,
+        reply_markup=get_location_keyboard(user.language)
+    )
+    await state.set_state(UstaXonaAddStates.share_location)
+    await callback.answer()
+
+
+@router.message(UstaXonaAddStates.share_location, F.location)
+async def process_location(message: Message, state: FSMContext):
+    """Process location sharing"""
+    await state.update_data(
+        latitude=message.location.latitude,
+        longitude=message.location.longitude
+    )
+    
     user = await db.get_user(message.from_user.id)
     
     if user.language == 'uz':
-        text = f"Ma'lumotlar qabul qilindi!\n\nNomi: {data['service_name']}\nTelefon: {phone}\n\nAdmin tasdiqlaydi."
+        text = "5️⃣ Manzilni yozing (masalan: Chilonzor 12-kvartal):"
     else:
-        text = f"Dannye prinyaty!\n\nNazvanie: {data['service_name']}\nTelefon: {phone}\n\nAdmin podtverdit."
+        text = "5️⃣ Напишите адрес (например: Чиланзар 12-квартал):"
     
-    await message.answer(text, reply_markup=ReplyKeyboardRemove())
+    await message.answer(text, reply_markup=get_cancel_keyboard(user.language))
+    await state.set_state(UstaXonaAddStates.enter_address)
+
+
+@router.message(UstaXonaAddStates.share_location, F.text)
+async def process_address_directly(message: Message, state: FSMContext):
+    """Process address from text without location"""
+    if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
+        await state.clear()
+        user = await db.get_user(message.from_user.id)
+        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
+        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        return
     
-    from bot.keyboards.inline import get_main_menu_keyboard
-    menu_text = "Asosiy menyu:" if user.language == 'uz' else "Glavnoe menyu:"
-    await message.answer(menu_text, reply_markup=get_main_menu_keyboard(user.language))
+    await state.update_data(address=message.text)
+    user = await db.get_user(message.from_user.id)
+    
+    if user.language == 'uz':
+        text = "6️⃣ Rasmni yuboring (ixtiyoriy, o'tkazib yuborish uchun 'Keyingi' yozing):"
+    else:
+        text = "6️⃣ Отправьте фото (необязательно, напишите 'Далее' чтобы пропустить):"
+    
+    await message.answer(text, reply_markup=get_cancel_keyboard(user.language))
+    await state.set_state(UstaXonaAddStates.upload_photo)
+
+
+@router.message(UstaXonaAddStates.enter_address)
+async def process_address(message: Message, state: FSMContext):
+    """Process address input"""
+    if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
+        await state.clear()
+        user = await db.get_user(message.from_user.id)
+        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
+        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        return
+    
+    await state.update_data(address=message.text)
+    user = await db.get_user(message.from_user.id)
+    
+    if user.language == 'uz':
+        text = "6️⃣ Rasmni yuboring (ixtiyoriy, o'tkazib yuborish uchun 'Keyingi' yozing):"
+    else:
+        text = "6️⃣ Отправьте фото (необязательно, напишите 'Далее' чтобы пропустить):"
+    
+    await message.answer(text, reply_markup=get_cancel_keyboard(user.language))
+    await state.set_state(UstaXonaAddStates.upload_photo)
+
+
+@router.message(UstaXonaAddStates.upload_photo, F.photo)
+async def process_photo(message: Message, state: FSMContext):
+    """Process photo upload"""
+    photo_file_id = message.photo[-1].file_id
+    await state.update_data(photo_file_id=photo_file_id)
+    
+    user = await db.get_user(message.from_user.id)
+    brands = await db.get_all_car_brands()
+    
+    if user.language == 'uz':
+        text = "7️⃣ Avtomobil markalarini tanlang:"
+    else:
+        text = "7️⃣ Выберите марки автомобилей:"
+    
+    await message.answer(
+        text,
+        reply_markup=get_car_brands_keyboard(user.language, brands)
+    )
+    await state.set_state(UstaXonaAddStates.choose_brands)
+
+
+@router.message(UstaXonaAddStates.upload_photo, F.text)
+async def skip_photo(message: Message, state: FSMContext):
+    """Skip photo upload"""
+    if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
+        await state.clear()
+        user = await db.get_user(message.from_user.id)
+        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
+        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        return
+    
+    user = await db.get_user(message.from_user.id)
+    brands = await db.get_all_car_brands()
+    
+    if user.language == 'uz':
+        text = "7️⃣ Avtomobil markalarini tanlang:"
+    else:
+        text = "7️⃣ Выберите марки автомобилей:"
+    
+    await message.answer(
+        text,
+        reply_markup=get_car_brands_keyboard(user.language, brands)
+    )
+    await state.set_state(UstaXonaAddStates.choose_brands)
+
+
+@router.callback_query(UstaXonaAddStates.choose_brands, F.data.startswith("brand_"))
+async def process_brand(callback: CallbackQuery, state: FSMContext):
+    """Process brand selection"""
+    brand_id = int(callback.data.split("_")[1])
+    data = await state.get_data()
+    
+    # Store brand IDs
+    brand_ids = data.get('brand_ids', [])
+    if brand_id not in brand_ids:
+        brand_ids.append(brand_id)
+    
+    await state.update_data(brand_ids=brand_ids)
+    
+    user = await db.get_user(callback.from_user.id)
+    
+    if user.language == 'uz':
+        text = "8️⃣ Qisqacha ta'rif kiriting (ixtiyoriy, o'tkazish uchun 'Keyingi'):"
+    else:
+        text = "8️⃣ Введите краткое описание (необязательно, 'Далее' чтобы пропустить):"
+    
+    await callback.message.answer(text, reply_markup=get_cancel_keyboard(user.language))
+    await state.set_state(UstaXonaAddStates.enter_description)
+    await callback.answer()
+
+
+@router.message(UstaXonaAddStates.enter_description)
+async def process_description(message: Message, state: FSMContext):
+    """Process description and save usta xona"""
+    if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
+        await state.clear()
+        user = await db.get_user(message.from_user.id)
+        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
+        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        return
+    
+    description = None if message.text.lower() in ['keyingi', 'далее', 'skip'] else message.text
+    
+    # Get all data
+    data = await state.get_data()
+    user = await db.get_user(message.from_user.id)
+    
+    # Create usta xona in database
+    try:
+        await db.create_usta_xona(
+            owner_id=message.from_user.id,
+            name=data['service_name'],
+            city_id=data['city_id'],
+            phone=data['phone'],
+            address=data.get('address'),
+            description=description,
+            car_brand_ids=data.get('brand_ids', []),
+            photo_file_id=data.get('photo_file_id'),
+            latitude=data.get('latitude'),
+            longitude=data.get('longitude')
+        )
+        
+        if user.language == 'uz':
+            text = "✅ Usta xona muvaffaqiyatli qo'shildi!\n\nAdmin tasdiqlashini kuting."
+        else:
+            text = "✅ Сервис успешно добавлен!\n\nОжидайте подтверждения администратора."
+        
+        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        
+        menu_text = "Asosiy menyu:" if user.language == 'uz' else "Главное меню:"
+        await message.answer(menu_text, reply_markup=get_main_menu_keyboard(user.language))
+        
+    except Exception as e:
+        if user.language == 'uz':
+            text = f"❌ Xatolik yuz berdi: {str(e)}"
+        else:
+            text = f"❌ Произошла ошибка: {str(e)}"
+        
+        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+    
     await state.clear()
+
