@@ -15,7 +15,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src'
 
 from bot.bot import create_bot, on_startup, on_shutdown
 
-
 async def main():
     """Main function to run the bot"""
     bot, dp = await create_bot()
