@@ -164,9 +164,9 @@ async def process_address_directly(message: Message, state: FSMContext):
     user = await db.get_user(message.from_user.id)
     
     if user.language == 'uz':
-        text = "6️⃣ Rasmni yuboring (ixtiyoriy, o'tkazib yuborish uchun 'Keyingi' yozing):"
+        text = "6️⃣ Rasmni yuboring:"
     else:
-        text = "6️⃣ Отправьте фото (необязательно, напишите 'Далее' чтобы пропустить):"
+        text = "6️⃣ Отправьте фото:"
     
     await message.answer(text, reply_markup=get_cancel_keyboard(user.language))
     await state.set_state(UstaXonaAddStates.upload_photo)
@@ -186,9 +186,9 @@ async def process_address(message: Message, state: FSMContext):
     user = await db.get_user(message.from_user.id)
     
     if user.language == 'uz':
-        text = "6️⃣ Rasmni yuboring (ixtiyoriy, o'tkazib yuborish uchun 'Keyingi' yozing):"
+        text = "6️⃣ Rasmni yuboring:"
     else:
-        text = "6️⃣ Отправьте фото (необязательно, напишите 'Далее' чтобы пропустить):"
+        text = "6️⃣ Отправьте фото:"
     
     await message.answer(text, reply_markup=get_cancel_keyboard(user.language))
     await state.set_state(UstaXonaAddStates.upload_photo)
@@ -256,9 +256,9 @@ async def process_brand(callback: CallbackQuery, state: FSMContext):
     user = await db.get_user(callback.from_user.id)
     
     if user.language == 'uz':
-        text = "8️⃣ Qisqacha ta'rif kiriting (ixtiyoriy, o'tkazish uchun 'Keyingi'):"
+        text = "8️⃣ Qisqacha ta'rif kiriting:"
     else:
-        text = "8️⃣ Введите краткое описание (необязательно, 'Далее' чтобы пропустить):"
+        text = "8️⃣ Введите краткое описание:"
     
     await callback.message.answer(text, reply_markup=get_cancel_keyboard(user.language))
     await state.set_state(UstaXonaAddStates.enter_description)
