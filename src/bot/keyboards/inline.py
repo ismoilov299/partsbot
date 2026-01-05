@@ -13,12 +13,14 @@ class Texts:
     CHOOSE_LANGUAGE_RU = "Выберите язык"
     
     # Main menu
-    MAIN_MENU_UZ = "Asosiy menyu"
-    MAIN_MENU_RU = "Главное меню"
-    SHOP_SEARCH_UZ = "🔍 Do'kon qidirish"
-    SHOP_SEARCH_RU = "🔍 Поиск магазина"
+    MAIN_MENU_UZ = "Siz nima qidiryapsiz?"
+    MAIN_MENU_RU = "Что вы ищете?"
+    SHOP_SEARCH_UZ = "🔍 Avtozapchast"
+    SHOP_SEARCH_RU = "🔍 Автозапчасти"
     SHOP_ADD_UZ = "➕ Do'kon kiritish"
     SHOP_ADD_RU = "➕ Добавить магазин"
+    USTA_XONA_SEARCH_UZ = "🔧 Usta xona"
+    USTA_XONA_SEARCH_RU = "🔧 Сервис"
     USTA_XONA_ADD_UZ = "🔧 Usta xona kiritish"
     USTA_XONA_ADD_RU = "🔧 Добавить сервис"
     
@@ -85,10 +87,12 @@ def get_main_menu_keyboard(language: str = 'uz') -> InlineKeyboardMarkup:
     
     if language == 'uz':
         keyboard.row(InlineKeyboardButton(text=Texts.SHOP_SEARCH_UZ, callback_data="shop_search"))
+        keyboard.row(InlineKeyboardButton(text=Texts.USTA_XONA_SEARCH_UZ, callback_data="usta_xona_search"))
         keyboard.row(InlineKeyboardButton(text=Texts.SHOP_ADD_UZ, callback_data="shop_add"))
         keyboard.row(InlineKeyboardButton(text=Texts.USTA_XONA_ADD_UZ, callback_data="usta_xona_add"))
     else:
         keyboard.row(InlineKeyboardButton(text=Texts.SHOP_SEARCH_RU, callback_data="shop_search"))
+        keyboard.row(InlineKeyboardButton(text=Texts.USTA_XONA_SEARCH_RU, callback_data="usta_xona_search"))
         keyboard.row(InlineKeyboardButton(text=Texts.SHOP_ADD_RU, callback_data="shop_add"))
         keyboard.row(InlineKeyboardButton(text=Texts.USTA_XONA_ADD_RU, callback_data="usta_xona_add"))
     

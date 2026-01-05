@@ -17,6 +17,29 @@ from bot.states import ShopSearchStates
 router = Router()
 
 
+@router.callback_query(F.data == "usta_xona_search")
+async def usta_xona_search_start(callback: CallbackQuery, state: FSMContext):
+    """Start usta xona search"""
+    user = await db.get_user(callback.from_user.id)
+    brands = await db.get_all_car_brands()
+    
+    # Filter out "Barchasi" / "Vse" from search brands
+    brands = [b for b in brands if b.name_uz != 'Barchasi' and b.name_ru != 'Vse']
+    
+    if user.language == 'uz':
+        text = "🔧 Usta xona qidirish\n\nAvtomobil markasini tanlang:"
+    else:
+        text = "🔧 Поиск сервиса\n\nВыберите марку автомобиля:"
+    
+    await callback.message.edit_text(
+        text,
+        reply_markup=get_car_brands_keyboard(user.language, brands)
+    )
+    await state.set_state(ShopSearchStates.choose_brand)
+    await state.update_data(search_type="usta_xona")
+    await callback.answer()
+
+
 @router.callback_query(F.data == "shop_search")
 async def shop_search_start(callback: CallbackQuery, state: FSMContext):
     """Start shop search"""
@@ -90,7 +113,7 @@ async def process_brand_selection(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(ShopSearchStates.choose_city, F.data.startswith("city_"))
 async def process_city_selection(callback: CallbackQuery, state: FSMContext):
-    """Process city selection and show shops"""
+    """Process city selection and show shops or usta xonalar"""
     city_id = int(callback.data.split("_")[1])
     city = await db.get_city(city_id)
     
@@ -101,8 +124,71 @@ async def process_city_selection(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     brand_id = data.get('selected_brand')
     brand_name = data.get('brand_name', '')
+    search_type = data.get('search_type', 'shop')
     
-    # Search shops by brand
+    user = await db.get_user(callback.from_user.id)
+    
+    # Check if searching for usta xona or shop
+    if search_type == "usta_xona":
+        # Search usta xonalar
+        usta_xonalar = await db.search_usta_xonalar(city_id, brand_id)
+        
+        if usta_xonalar:
+            if user.language == 'uz':
+                header_text = f"✅ {city.name_uz} shahrida {brand_name} uchun {len(usta_xonalar)} ta usta xona topildi:\n\n"
+            else:
+                header_text = f"✅ Найдено {len(usta_xonalar)} сервисов для {brand_name} в городе {city.name_ru}:\n\n"
+            
+            await callback.message.answer(header_text)
+            
+            # Send each usta xona
+            for i, usta_xona in enumerate(usta_xonalar, 1):
+                usta_text = f"{i}. 🔧 {usta_xona.name}\n"
+                usta_text += f"📞 {usta_xona.phone}\n"
+                if usta_xona.address:
+                    usta_text += f"📍 {usta_xona.address}\n"
+                if usta_xona.description:
+                    usta_text += f"ℹ️ {usta_xona.description}\n"
+                
+                if usta_xona.photo_file_id:
+                    try:
+                        await callback.message.answer_photo(
+                            photo=usta_xona.photo_file_id,
+                            caption=usta_text
+                        )
+                    except Exception:
+                        await callback.message.answer(usta_text)
+                else:
+                    await callback.message.answer(usta_text)
+                
+                if usta_xona.latitude and usta_xona.longitude:
+                    try:
+                        await callback.message.answer_location(
+                            latitude=usta_xona.latitude,
+                            longitude=usta_xona.longitude
+                        )
+                    except Exception:
+                        pass
+            
+            if user.language == 'uz':
+                final_text = "⬆️ Yuqorida topilgan usta xonalar"
+            else:
+                final_text = "⬆️ Найденные сервисы выше"
+            
+            await callback.message.answer(final_text)
+        else:
+            if user.language == 'uz':
+                result_text = f"❌ {city.name_uz} shahrida {brand_name} uchun usta xonalar topilmadi."
+            else:
+                result_text = f"❌ Сервисы для {brand_name} в городе {city.name_ru} не найдены."
+            
+            await callback.message.answer(result_text)
+        
+        await state.clear()
+        await callback.answer()
+        return
+    
+    # Search shops by brand (default behavior)
     shops = await db.search_shops(city_id, brand_id)
     
     user = await db.get_user(callback.from_user.id)

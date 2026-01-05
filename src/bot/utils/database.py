@@ -104,6 +104,12 @@ class DatabaseManager:
     
     @staticmethod
     @sync_to_async
+    def get_all_usta_xonalar() -> List[UstaXona]:
+        """Get all usta xonalar (for debugging)"""
+        return list(UstaXona.objects.all().select_related('city', 'owner').prefetch_related('car_brands'))
+    
+    @staticmethod
+    @sync_to_async
     def create_shop(owner_id: int, name: str, city_id: int, 
                    phone: str, address: str = None, 
                    description: str = None, car_brand_ids: List[int] = None,
@@ -229,6 +235,7 @@ get_city = _db_manager.get_city
 get_car_brand_by_order = _db_manager.get_car_brand_by_order
 search_shops = _db_manager.search_shops
 search_usta_xonalar = _db_manager.search_usta_xonalar
+get_all_usta_xonalar = _db_manager.get_all_usta_xonalar
 create_shop = _db_manager.create_shop
 create_usta_xona = _db_manager.create_usta_xona
 create_request = _db_manager.create_request
