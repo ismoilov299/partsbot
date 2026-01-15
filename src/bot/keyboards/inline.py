@@ -62,12 +62,12 @@ class Texts:
     
     # Service types for usta xona
     SERVICE_TYPES = [
-        {"uz": "🔧 Ta'mirlash", "ru": "🔧 Ремонт"},
-        {"uz": "🛠 Texservis", "ru": "🛠 Техсервис"},
-        {"uz": "🚗 Diagnostika", "ru": "🚗 Диагностика"},
-        {"uz": "🎨 Bo'yoq", "ru": "🎨 Покраска"},
+        {"uz": "🔧 Motor xodovoy", "ru": "🔧 Двигатель и ходовая"},
         {"uz": "⚡️ Elektrik", "ru": "⚡️ Электрика"},
-        {"uz": "🔩 Slesar", "ru": "🔩 Слесарь"},
+        {"uz": "🚗 Kuzov remont", "ru": "🚗 Кузовной ремонт"},
+        {"uz": "✨ Tuning", "ru": "✨ Тюнинг"},
+        {"uz": "🛢 Moy alishtirish", "ru": "🛢 Замена масла"},
+        {"uz": "⚙️ Balansirovka", "ru": "⚙️ Балансировка"},
     ]
 
 
@@ -288,5 +288,33 @@ def get_part_categories_keyboard(language: str = 'uz', selected: list = None) ->
             keyboard.row(InlineKeyboardButton(text="✅ Tayyor", callback_data="partcat_done"))
         else:
             keyboard.row(InlineKeyboardButton(text="✅ Готово", callback_data="partcat_done"))
+    
+    return keyboard.as_markup()
+
+
+def get_service_types_keyboard(language: str = 'uz', selected: list = None) -> InlineKeyboardMarkup:
+    """Get service types keyboard with multi-select support"""
+    keyboard = InlineKeyboardBuilder()
+    
+    if selected is None:
+        selected = []
+    
+    for i, service_type in enumerate(Texts.SERVICE_TYPES):
+        text = service_type[language]
+        # Add checkmark if selected
+        if i in selected:
+            text = f"✅ {text}"
+        
+        keyboard.row(InlineKeyboardButton(
+            text=text,
+            callback_data=f"servicetype_{i}"
+        ))
+    
+    # Add "Done" button if at least one selected
+    if selected:
+        if language == 'uz':
+            keyboard.row(InlineKeyboardButton(text="✅ Tayyor", callback_data="servicetype_done"))
+        else:
+            keyboard.row(InlineKeyboardButton(text="✅ Готово", callback_data="servicetype_done"))
     
     return keyboard.as_markup()

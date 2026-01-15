@@ -3,7 +3,7 @@ Usta Xona add handlers - service center registration
 """
 import logging
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove, FSInputFile
 from aiogram.fsm.context import FSMContext
 
 from bot.keyboards import (
@@ -12,6 +12,7 @@ from bot.keyboards import (
 )
 from bot.keyboards.inline import get_main_menu_keyboard
 from bot.utils import database as db
+from bot.utils.photo import download_photo, get_photo_path
 from bot.states import UstaXonaAddStates
 
 router = Router()
@@ -205,22 +206,34 @@ async def process_address(message: Message, state: FSMContext):
 async def process_photo(message: Message, state: FSMContext):
     """Process photo upload"""
     logger.info(f"User {message.from_user.id} uploaded photo")
-    photo_file_id = message.photo[-1].file_id
-    await state.update_data(photo_file_id=photo_file_id)
+    photo = message.photo[-1]  # Get largest photo
     
-    user = await db.get_user(message.from_user.id)
-    brands = await db.get_all_car_brands()
-    
-    if user.language == 'uz':
-        text = "7️⃣ Avtomobil markalarini tanlang:"
-    else:
-        text = "7️⃣ Выберите марки автомобилей:"
-    
-    await message.answer(
-        text,
-        reply_markup=get_car_brands_keyboard(user.language, brands)
-    )
-    await state.set_state(UstaXonaAddStates.choose_brands)
+    try:
+        # Download and save photo to local storage
+        photo_path = await download_photo(message.bot, photo, folder="usta_xonalar")
+        await state.update_data(photo_path=photo_path)
+        
+        user = await db.get_user(message.from_user.id)
+        brands = await db.get_all_car_brands()
+        
+        if user.language == 'uz':
+            text = "✅ Rasm saqlandi!\n\n7️⃣ Avtomobil markalarini tanlang:"
+        else:
+            text = "✅ Фото сохранено!\n\n7️⃣ Выберите марки автомобилей:"
+        
+        await message.answer(
+            text,
+            reply_markup=get_car_brands_keyboard(user.language, brands)
+        )
+        await state.set_state(UstaXonaAddStates.choose_brands)
+    except Exception as e:
+        logger.error(f"Error saving photo for user {message.from_user.id}: {str(e)}")
+        user = await db.get_user(message.from_user.id)
+        if user.language == 'uz':
+            text = f"❌ Rasmni saqlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+        else:
+            text = f"❌ Ошибка при сохранении фото. Пожалуйста, попробуйте снова."
+        await message.answer(text)
 
 
 @router.message(UstaXonaAddStates.upload_photo, F.text)
@@ -296,7 +309,7 @@ async def process_description(message: Message, state: FSMContext):
     logger.info(f"  - Phone: {data.get('phone')}")
     logger.info(f"  - Address: {data.get('address')}")
     logger.info(f"  - Brands: {data.get('brand_ids', [])}")
-    logger.info(f"  - Has photo: {bool(data.get('photo_file_id'))}")
+    logger.info(f"  - Has photo: {bool(data.get('photo_path'))}")
     logger.info(f"  - Has location: {bool(data.get('latitude'))}")
     
     # Create usta xona in database
@@ -309,7 +322,7 @@ async def process_description(message: Message, state: FSMContext):
             address=data.get('address'),
             description=description,
             car_brand_ids=data.get('brand_ids', []),
-            photo_file_id=data.get('photo_file_id'),
+            photo_path=data.get('photo_path'),
             latitude=data.get('latitude'),
             longitude=data.get('longitude')
         )

@@ -16,6 +16,7 @@ django.setup()
 
 from src.django_app.models import User, City, CarBrand, Shop, UstaXona, Request
 from asgiref.sync import sync_to_async
+from django.db.models import Q
 
 
 class DatabaseManager:
@@ -90,16 +91,50 @@ class DatabaseManager:
         """Search shops by city and optionally by car brand"""
         query = Shop.objects.filter(city_id=city_id, is_active=True, is_approved=True)
         if car_brand_id:
-            query = query.filter(car_brands__id=car_brand_id)
+            # Check if "Boshqa Inomarkalar" / "Другие Иномарки" is selected
+            try:
+                other_brand = CarBrand.objects.get(id=car_brand_id)
+                if other_brand.name_uz == 'Boshqa Inomarkalar' or other_brand.name_ru == 'Другие Иномарки':
+                    # Get GM brand ID to exclude it
+                    try:
+                        gm_brand = CarBrand.objects.get(name_uz='CHEVROLET GM')
+                        # Search for shops that have any brand except GM
+                        query = query.exclude(car_brands__id=gm_brand.id).filter(car_brands__isnull=False)
+                    except CarBrand.DoesNotExist:
+                        # If GM doesn't exist, just search all brands
+                        query = query.filter(car_brands__isnull=False)
+                else:
+                    # Normal brand search
+                    query = query.filter(car_brands__id=car_brand_id)
+            except CarBrand.DoesNotExist:
+                # Brand not found, return empty
+                return []
         return list(query.select_related('city', 'owner').prefetch_related('car_brands'))
     
     @staticmethod
     @sync_to_async
-    def search_usta_xonalar(city_id: int, car_brand_id: int = None) -> List[UstaXona]:
-        """Search usta xonalar by city and optionally by car brand"""
+    def search_usta_xonalar(city_id: int, car_brand_id: int = None, service_types: List[str] = None, language: str = 'uz') -> List[UstaXona]:
+        """Search usta xonalar by city, car brand, and service types"""
         query = UstaXona.objects.filter(city_id=city_id, is_active=True, is_approved=True)
+        
         if car_brand_id:
             query = query.filter(car_brands__id=car_brand_id)
+        
+        # Filter by service types if provided
+        if service_types:
+            # Use JSONField contains lookup for each service type
+            # For SQLite JSONField, __contains works with JSON arrays
+            service_field = 'service_types_uz' if language == 'uz' else 'service_types_ru'
+            
+            # Filter usta xonalar that have at least one of the selected service types
+            service_filter = Q()
+            for service_type in service_types:
+                # For SQLite JSONField, we check if the service type string is in the JSON array
+                # Using __contains with the service type string (not as array)
+                service_filter |= Q(**{f"{service_field}__contains": service_type})
+            
+            query = query.filter(service_filter)
+        
         return list(query.select_related('city', 'owner').prefetch_related('car_brands'))
     
     @staticmethod
@@ -113,7 +148,7 @@ class DatabaseManager:
     def create_shop(owner_id: int, name: str, city_id: int, 
                    phone: str, address: str = None, 
                    description: str = None, car_brand_ids: List[int] = None,
-                   photo_file_id: str = None, latitude: float = None,
+                   photo_path: str = None, latitude: float = None,
                    longitude: float = None, part_categories_uz: List[str] = None,
                    part_categories_ru: List[str] = None) -> Shop:
         """Create a new shop"""
@@ -125,7 +160,7 @@ class DatabaseManager:
             phone=phone,
             address=address,
             description=description,
-            photo_file_id=photo_file_id,
+            photo_path=photo_path,
             latitude=latitude,
             longitude=longitude,
             part_categories_uz=part_categories_uz,
@@ -200,7 +235,7 @@ class DatabaseManager:
     def create_usta_xona(owner_id: int, name: str, city_id: int, 
                         phone: str, address: str = None, 
                         description: str = None, car_brand_ids: List[int] = None,
-                        photo_file_id: str = None, latitude: float = None,
+                        photo_path: str = None, latitude: float = None,
                         longitude: float = None, service_types_uz: List[str] = None,
                         service_types_ru: List[str] = None) -> UstaXona:
         """Create a new usta xona (service center)"""
@@ -212,7 +247,7 @@ class DatabaseManager:
             phone=phone,
             address=address,
             description=description,
-            photo_file_id=photo_file_id,
+            photo_path=photo_path,
             latitude=latitude,
             longitude=longitude,
             service_types_uz=service_types_uz,

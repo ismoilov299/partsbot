@@ -8,7 +8,9 @@ from aiogram.fsm.context import FSMContext
 
 from bot.keyboards import get_cities_keyboard, get_car_brands_keyboard, Texts, get_cancel_keyboard, get_phone_keyboard, get_location_keyboard, get_part_categories_keyboard
 from bot.utils import database as db
+from bot.utils.photo import download_photo, get_photo_path
 from bot.states import ShopAddStates
+from aiogram.types import FSInputFile
 
 router = Router()
 
@@ -233,23 +235,33 @@ async def process_address(message: Message, state: FSMContext):
 @router.message(ShopAddStates.upload_photo, F.photo)
 async def process_photo(message: Message, state: FSMContext):
     """Process photo and ask for car brands"""
-    # Save photo file_id
+    # Download and save photo to local storage
     photo = message.photo[-1]  # Get largest photo
-    await state.update_data(photo_file_id=photo.file_id)
     
-    user = await db.get_user(message.from_user.id)
-    brands = await db.get_all_car_brands()
-    
-    if user.language == 'uz':
-        text = "7️⃣ Qaysi avtomobil markalari uchun ehtiyot qismlar sotasiz?\n\nKeraklisini tanlang (bir yoki bir nechtasini):"
-    else:
-        text = "7️⃣ Для каких марок автомобилей продаете запчасти?\n\nВыберите нужные (один или несколько):"
-    
-    await message.answer(
-        text,
-        reply_markup=get_car_brands_keyboard(user.language, brands)
-    )
-    await state.set_state(ShopAddStates.choose_brands)
+    try:
+        photo_path = await download_photo(message.bot, photo, folder="shops")
+        await state.update_data(photo_path=photo_path)
+        
+        user = await db.get_user(message.from_user.id)
+        brands = await db.get_all_car_brands()
+        
+        if user.language == 'uz':
+            text = "✅ Rasm saqlandi!\n\n7️⃣ Qaysi avtomobil markalari uchun ehtiyot qismlar sotasiz?\n\nKeraklisini tanlang (bir yoki bir nechtasini):"
+        else:
+            text = "✅ Фото сохранено!\n\n7️⃣ Для каких марок автомобилей продаете запчасти?\n\nВыберите нужные (один или несколько):"
+        
+        await message.answer(
+            text,
+            reply_markup=get_car_brands_keyboard(user.language, brands)
+        )
+        await state.set_state(ShopAddStates.choose_brands)
+    except Exception as e:
+        user = await db.get_user(message.from_user.id)
+        if user.language == 'uz':
+            text = f"❌ Rasmni saqlashda xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+        else:
+            text = f"❌ Ошибка при сохранении фото. Пожалуйста, попробуйте снова."
+        await message.answer(text)
 
 
 @router.message(ShopAddStates.upload_photo)
@@ -397,11 +409,19 @@ async def process_part_category(callback: CallbackQuery, state: FSMContext):
             keyboard.row(InlineKeyboardButton(text="✅ Да, верно", callback_data="confirm_shop_yes"))
             keyboard.row(InlineKeyboardButton(text="❌ Нет, заново", callback_data="confirm_shop_no"))
         
-        await callback.message.answer_photo(
-            photo=data['photo_file_id'],
-            caption=confirm_text,
-            reply_markup=keyboard.as_markup()
-        )
+        # Send photo from local file
+        if data.get('photo_path'):
+            photo_file = FSInputFile(get_photo_path(data['photo_path']))
+            await callback.message.answer_photo(
+                photo=photo_file,
+                caption=confirm_text,
+                reply_markup=keyboard.as_markup()
+            )
+        else:
+            await callback.message.answer(
+                confirm_text,
+                reply_markup=keyboard.as_markup()
+            )
         await state.set_state(ShopAddStates.confirm)
     else:
         # Toggle category selection
@@ -495,11 +515,19 @@ async def process_description(message: Message, state: FSMContext):
         keyboard.row(InlineKeyboardButton(text="✅ Да, верно", callback_data="confirm_shop_yes"))
         keyboard.row(InlineKeyboardButton(text="❌ Нет, заново", callback_data="confirm_shop_no"))
     
-    await message.answer_photo(
-        photo=data['photo_file_id'],
-        caption=confirm_text,
-        reply_markup=keyboard.as_markup()
-    )
+    # Send photo from local file
+    if data.get('photo_path'):
+        photo_file = FSInputFile(get_photo_path(data['photo_path']))
+        await message.answer_photo(
+            photo=photo_file,
+            caption=confirm_text,
+            reply_markup=keyboard.as_markup()
+        )
+    else:
+        await message.answer(
+            confirm_text,
+            reply_markup=keyboard.as_markup()
+        )
     await message.answer("👆", reply_markup=ReplyKeyboardRemove())
     await state.set_state(ShopAddStates.confirm)
 
@@ -518,9 +546,9 @@ async def confirm_shop(callback: CallbackQuery, state: FSMContext):
             city_id=data['city_id'],
             phone=data['phone'],
             address=data['address'],
-            description=data['description'],
+            description=data.get('description', ''),
             car_brand_ids=data['brand_ids'],
-            photo_file_id=data['photo_file_id'],
+            photo_path=data.get('photo_path'),
             latitude=data.get('latitude'),
             longitude=data.get('longitude'),
             part_categories_uz=data.get('part_categories_uz'),
@@ -599,12 +627,22 @@ async def confirm_shop(callback: CallbackQuery, state: FSMContext):
                 # Send to admin with photo
                 from aiogram import Bot
                 bot = Bot(token=os.getenv('BOT_TOKEN'))
-                await bot.send_photo(
-                    chat_id=admin_chat_id,
-                    photo=data['photo_file_id'],
-                    caption=admin_text,
-                    reply_markup=admin_keyboard.as_markup()
-                )
+                
+                # Send photo from local file if exists
+                if data.get('photo_path'):
+                    photo_file = FSInputFile(get_photo_path(data['photo_path']))
+                    await bot.send_photo(
+                        chat_id=admin_chat_id,
+                        photo=photo_file,
+                        caption=admin_text,
+                        reply_markup=admin_keyboard.as_markup()
+                    )
+                else:
+                    await bot.send_message(
+                        chat_id=admin_chat_id,
+                        text=admin_text,
+                        reply_markup=admin_keyboard.as_markup()
+                    )
                 
                 # Send location if exists
                 if data.get('latitude') and data.get('longitude'):

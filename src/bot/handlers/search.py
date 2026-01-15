@@ -3,17 +3,21 @@ Shop search handlers
 """
 import logging
 from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 
 from bot.keyboards import (
     get_search_type_keyboard,
     get_car_brands_keyboard,
     get_cities_keyboard,
+    get_service_types_keyboard,
     Texts
 )
 from bot.utils import database as db
-from bot.states import ShopSearchStates
+from bot.utils.photo import get_photo_path, photo_exists
+from bot.states import ShopSearchStates, UstaXonaSearchStates
+from aiogram.types import InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -21,25 +25,60 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data == "usta_xona_search")
 async def usta_xona_search_start(callback: CallbackQuery, state: FSMContext):
-    """Start usta xona search"""
+    """Start usta xona search - ask if user needs usta xona"""
     logger.info(f"User {callback.from_user.id} started usta xona search")
     user = await db.get_user(callback.from_user.id)
-    brands = await db.get_all_car_brands()
-    
-    # Filter out "Barchasi" / "Vse" from search brands
-    brands = [b for b in brands if b.name_uz != 'Barchasi' and b.name_ru != 'Vse']
     
     if user.language == 'uz':
-        text = "🔧 Usta xona qidirish\n\nAvtomobil markasini tanlang:"
+        text = "🔧 Sizga usta xona kerakmi?\n\n"
+        text += "Usta xonalar - avtomobil ta'mirlash xizmatlari:\n"
+        text += "• 🔧 Motor xodovoy\n"
+        text += "• ⚡️ Elektrik\n"
+        text += "• 🚗 Kuzov remont\n"
+        text += "• ✨ Tuning\n"
+        text += "• 🛢 Moy alishtirish\n"
+        text += "• ⚙️ Balansirovka"
     else:
-        text = "🔧 Поиск сервиса\n\nВыберите марку автомобиля:"
+        text = "🔧 Нужны ли вам сервисы?\n\n"
+        text += "Сервисы - услуги по ремонту автомобилей:\n"
+        text += "• 🔧 Двигатель и ходовая\n"
+        text += "• ⚡️ Электрика\n"
+        text += "• 🚗 Кузовной ремонт\n"
+        text += "• ✨ Тюнинг\n"
+        text += "• 🛢 Замена масла\n"
+        text += "• ⚙️ Балансировка"
+    
+    keyboard = InlineKeyboardBuilder()
+    if user.language == 'uz':
+        keyboard.row(InlineKeyboardButton(text="✅ Ha, kerak", callback_data="usta_xona_yes"))
+        keyboard.row(InlineKeyboardButton(text="❌ Yo'q", callback_data="back_to_main"))
+    else:
+        keyboard.row(InlineKeyboardButton(text="✅ Да, нужны", callback_data="usta_xona_yes"))
+        keyboard.row(InlineKeyboardButton(text="❌ Нет", callback_data="back_to_main"))
     
     await callback.message.edit_text(
         text,
-        reply_markup=get_car_brands_keyboard(user.language, brands)
+        reply_markup=keyboard.as_markup()
     )
-    await state.set_state(ShopSearchStates.choose_brand)
-    await state.update_data(search_type="usta_xona")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "usta_xona_yes")
+async def usta_xona_yes(callback: CallbackQuery, state: FSMContext):
+    """User needs usta xona - ask for service types"""
+    user = await db.get_user(callback.from_user.id)
+    
+    if user.language == 'uz':
+        text = "🔧 Sizga aynan qanday xizmat kerak?\n\nKerakli xizmat turlarini tanlang (bir yoki bir nechtasini):"
+    else:
+        text = "🔧 Какие именно услуги вам нужны?\n\nВыберите нужные типы услуг (один или несколько):"
+    
+    await callback.message.edit_text(
+        text,
+        reply_markup=get_service_types_keyboard(user.language)
+    )
+    await state.set_state(UstaXonaSearchStates.choose_service_types)
+    await state.update_data(selected_service_types=[])
     await callback.answer()
 
 
@@ -60,14 +99,90 @@ async def shop_search_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+@router.callback_query(UstaXonaSearchStates.choose_service_types, F.data.startswith("servicetype_"))
+async def process_service_type_selection(callback: CallbackQuery, state: FSMContext):
+    """Process service type selection"""
+    data = await state.get_data()
+    selected = data.get('selected_service_types', [])
+    user = await db.get_user(callback.from_user.id)
+    
+    if callback.data == "servicetype_done":
+        # User finished selecting service types
+        if not selected:
+            if user.language == 'uz':
+                await callback.answer("Kamida bitta xizmat turini tanlang!", show_alert=True)
+            else:
+                await callback.answer("Выберите хотя бы один тип услуги!", show_alert=True)
+            return
+        
+        # Get service type names
+        service_type_names_uz = [Texts.SERVICE_TYPES[i]['uz'] for i in selected]
+        service_type_names_ru = [Texts.SERVICE_TYPES[i]['ru'] for i in selected]
+        
+        await state.update_data(
+            service_type_names_uz=service_type_names_uz,
+            service_type_names_ru=service_type_names_ru
+        )
+        
+        # Move to brand selection
+        brands = await db.get_all_car_brands()
+        brands = [b for b in brands if b.name_uz != 'Barchasi' and b.name_ru != 'Vse']
+        
+        if user.language == 'uz':
+            text = "🚗 Avtomobil markasini tanlang:"
+        else:
+            text = "🚗 Выберите марку автомобиля:"
+        
+        await callback.message.edit_text(
+            text,
+            reply_markup=get_car_brands_keyboard(user.language, brands)
+        )
+        await state.set_state(UstaXonaSearchStates.choose_brand)
+        await callback.answer()
+    else:
+        # Toggle service type selection
+        service_type_id = int(callback.data.split("_")[1])
+        
+        if service_type_id in selected:
+            selected.remove(service_type_id)
+        else:
+            selected.append(service_type_id)
+        
+        await state.update_data(selected_service_types=selected)
+        
+        # Update keyboard
+        await callback.message.edit_reply_markup(
+            reply_markup=get_service_types_keyboard(user.language, selected)
+        )
+        await callback.answer()
+
+
 @router.callback_query(F.data == "search_by_model")
 async def search_by_model(callback: CallbackQuery, state: FSMContext):
-    """Search by car model"""
+    """Search by car model - show GM and Other brands for shop search"""
     user = await db.get_user(callback.from_user.id)
-    brands = await db.get_all_car_brands()
+    all_brands = await db.get_all_car_brands()
     
     # Filter out "Barchasi" / "Vse" from search brands
-    brands = [b for b in brands if b.name_uz != 'Barchasi' and b.name_ru != 'Все']
+    all_brands = [b for b in all_brands if b.name_uz != 'Barchasi' and b.name_ru != 'Все']
+    
+    # For shop search: show only GM and "Boshqa Inomarkalar"
+    # Find GM brand
+    gm_brand = None
+    other_brand = None
+    
+    for brand in all_brands:
+        if brand.name_uz == 'CHEVROLET GM' or brand.name_ru == 'CHEVROLET GM':
+            gm_brand = brand
+        elif brand.name_uz == 'Boshqa Inomarkalar' or brand.name_ru == 'Другие Иномарки':
+            other_brand = brand
+    
+    # Create filtered brands list: only GM and "Boshqa Inomarkalar"
+    filtered_brands = []
+    if gm_brand:
+        filtered_brands.append(gm_brand)
+    if other_brand:
+        filtered_brands.append(other_brand)
     
     if user.language == 'uz':
         text = "Avtomobil markasini tanlang:"
@@ -76,7 +191,7 @@ async def search_by_model(callback: CallbackQuery, state: FSMContext):
     
     await callback.message.edit_text(
         text,
-        reply_markup=get_car_brands_keyboard(user.language, brands)
+        reply_markup=get_car_brands_keyboard(user.language, filtered_brands)
     )
     await state.set_state(ShopSearchStates.choose_brand)
     await callback.answer()
@@ -84,7 +199,7 @@ async def search_by_model(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(ShopSearchStates.choose_brand, F.data.startswith("brand_"))
 async def process_brand_selection(callback: CallbackQuery, state: FSMContext):
-    """Process brand selection and ask for city"""
+    """Process brand selection and ask for city (for shop search)"""
     brand_id = int(callback.data.split("_")[1])
     brand = await db.get_car_brand(brand_id)
     
@@ -114,9 +229,40 @@ async def process_brand_selection(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.callback_query(ShopSearchStates.choose_city, F.data.startswith("city_"))
-async def process_city_selection(callback: CallbackQuery, state: FSMContext):
-    """Process city selection and show shops or usta xonalar"""
+@router.callback_query(UstaXonaSearchStates.choose_brand, F.data.startswith("brand_"))
+async def process_usta_xona_brand_selection(callback: CallbackQuery, state: FSMContext):
+    """Process brand selection for usta xona search and ask for city"""
+    brand_id = int(callback.data.split("_")[1])
+    brand = await db.get_car_brand(brand_id)
+    
+    if not brand:
+        await callback.answer("Xatolik yuz berdi!", show_alert=True)
+        return
+    
+    user = await db.get_user(callback.from_user.id)
+    brand_name = brand.name_uz if user.language == 'uz' else brand.name_ru
+    
+    # Save selected brand
+    await state.update_data(selected_brand=brand.id, brand_name=brand_name)
+    
+    cities = await db.get_all_cities()
+    
+    if user.language == 'uz':
+        text = "🏙 Qaysi shahardagi usta xonalar kerak?"
+    else:
+        text = "🏙 Сервисы в каком городе нужны?"
+    
+    await callback.message.edit_text(
+        text,
+        reply_markup=get_cities_keyboard(cities, user.language)
+    )
+    await state.set_state(UstaXonaSearchStates.choose_city)
+    await callback.answer()
+
+
+@router.callback_query(UstaXonaSearchStates.choose_city, F.data.startswith("city_"))
+async def process_usta_xona_city_selection(callback: CallbackQuery, state: FSMContext):
+    """Process city selection for usta xona search and show results"""
     city_id = int(callback.data.split("_")[1])
     city = await db.get_city(city_id)
     
@@ -127,73 +273,137 @@ async def process_city_selection(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     brand_id = data.get('selected_brand')
     brand_name = data.get('brand_name', '')
-    search_type = data.get('search_type', 'shop')
+    service_type_names_uz = data.get('service_type_names_uz', [])
+    service_type_names_ru = data.get('service_type_names_ru', [])
     
     user = await db.get_user(callback.from_user.id)
     
-    # Check if searching for usta xona or shop
-    if search_type == "usta_xona":
-        logger.info(f"User {callback.from_user.id} searching usta xona: brand_id={brand_id}, city_id={city_id}")
-        # Search usta xonalar
-        usta_xonalar = await db.search_usta_xonalar(city_id, brand_id)
+    # Get service type names based on language
+    service_types = service_type_names_uz if user.language == 'uz' else service_type_names_ru
+    
+    logger.info(f"User {callback.from_user.id} searching usta xona: brand_id={brand_id}, city_id={city_id}, service_types={service_types}")
+    
+    # Search usta xonalar with service types filter
+    usta_xonalar = await db.search_usta_xonalar(
+        city_id=city_id,
+        car_brand_id=brand_id,
+        service_types=service_types,
+        language=user.language
+    )
+    
+    logger.info(f"Found {len(usta_xonalar)} usta xonalar for user {callback.from_user.id}")
+    
+    if usta_xonalar:
+        service_types_text = ', '.join(service_types)
+        if user.language == 'uz':
+            header_text = f"✅ {city.name_uz} shahrida {brand_name} uchun {len(usta_xonalar)} ta usta xona topildi:\n\n"
+            header_text += f"Xizmat turlari: {service_types_text}\n\n"
+        else:
+            header_text = f"✅ Найдено {len(usta_xonalar)} сервисов для {brand_name} в городе {city.name_ru}:\n\n"
+            header_text += f"Типы услуг: {service_types_text}\n\n"
         
-        logger.info(f"Found {len(usta_xonalar)} usta xonalar for user {callback.from_user.id}")
+        await callback.message.answer(header_text)
         
-        if usta_xonalar:
-            if user.language == 'uz':
-                header_text = f"✅ {city.name_uz} shahrida {brand_name} uchun {len(usta_xonalar)} ta usta xona topildi:\n\n"
-            else:
-                header_text = f"✅ Найдено {len(usta_xonalar)} сервисов для {brand_name} в городе {city.name_ru}:\n\n"
+        # Send each usta xona
+        for i, usta_xona in enumerate(usta_xonalar, 1):
+            usta_text = f"{i}. 🔧 {usta_xona.name}\n"
+            usta_text += f"📞 {usta_xona.phone}\n"
+            if usta_xona.address:
+                usta_text += f"📍 {usta_xona.address}\n"
+            if usta_xona.description:
+                usta_text += f"ℹ️ {usta_xona.description}\n"
             
-            await callback.message.answer(header_text)
+            # Add service types with hashtags
+            if user.language == 'uz' and usta_xona.service_types_uz:
+                import re
+                def remove_emoji(text):
+                    emoji_pattern = re.compile("["
+                        u"\U0001F600-\U0001F64F"
+                        u"\U0001F300-\U0001F5FF"
+                        u"\U0001F680-\U0001F6FF"
+                        u"\U0001F1E0-\U0001F1FF"
+                        u"\U00002702-\U000027B0"
+                        u"\U000024C2-\U0001F251"
+                        "]+", flags=re.UNICODE)
+                    return emoji_pattern.sub(r'', text)
+                service_types_clean = [remove_emoji(cat).strip() for cat in usta_xona.service_types_uz]
+                service_types_formatted = ' '.join([f'#{cat.replace(" ", "")}' for cat in service_types_clean])
+                usta_text += f"🛠 {service_types_formatted}\n"
+            elif user.language == 'ru' and usta_xona.service_types_ru:
+                import re
+                def remove_emoji(text):
+                    emoji_pattern = re.compile("["
+                        u"\U0001F600-\U0001F64F"
+                        u"\U0001F300-\U0001F5FF"
+                        u"\U0001F680-\U0001F6FF"
+                        u"\U0001F1E0-\U0001F1FF"
+                        u"\U00002702-\U000027B0"
+                        u"\U000024C2-\U0001F251"
+                        "]+", flags=re.UNICODE)
+                    return emoji_pattern.sub(r'', text)
+                service_types_clean = [remove_emoji(cat).strip() for cat in usta_xona.service_types_ru]
+                service_types_formatted = ' '.join([f'#{cat.replace(" ", "")}' for cat in service_types_clean])
+                usta_text += f"🛠 {service_types_formatted}\n"
             
-            # Send each usta xona
-            for i, usta_xona in enumerate(usta_xonalar, 1):
-                usta_text = f"{i}. 🔧 {usta_xona.name}\n"
-                usta_text += f"📞 {usta_xona.phone}\n"
-                if usta_xona.address:
-                    usta_text += f"📍 {usta_xona.address}\n"
-                if usta_xona.description:
-                    usta_text += f"ℹ️ {usta_xona.description}\n"
-                
-                if usta_xona.photo_file_id:
-                    try:
+            if usta_xona.photo_path:
+                try:
+                    if photo_exists(usta_xona.photo_path):
+                        photo_file = FSInputFile(get_photo_path(usta_xona.photo_path))
                         await callback.message.answer_photo(
-                            photo=usta_xona.photo_file_id,
+                            photo=photo_file,
                             caption=usta_text
                         )
-                    except Exception:
+                    else:
                         await callback.message.answer(usta_text)
-                else:
+                except Exception as e:
+                    logger.error(f"Error sending usta xona photo: {e}")
                     await callback.message.answer(usta_text)
-                
-                if usta_xona.latitude and usta_xona.longitude:
-                    try:
-                        await callback.message.answer_location(
-                            latitude=usta_xona.latitude,
-                            longitude=usta_xona.longitude
-                        )
-                    except Exception:
-                        pass
-            
-            if user.language == 'uz':
-                final_text = "⬆️ Yuqorida topilgan usta xonalar"
             else:
-                final_text = "⬆️ Найденные сервисы выше"
+                await callback.message.answer(usta_text)
             
-            await callback.message.answer(final_text)
-        else:
-            logger.warning(f"No usta xonalar found for user {callback.from_user.id}: brand_id={brand_id}, city_id={city_id}")
-            if user.language == 'uz':
-                result_text = f"❌ {city.name_uz} shahrida {brand_name} uchun usta xonalar topilmadi."
-            else:
-                result_text = f"❌ Сервисы для {brand_name} в городе {city.name_ru} не найдены."
-            
-            await callback.message.answer(result_text)
+            if usta_xona.latitude and usta_xona.longitude:
+                try:
+                    await callback.message.answer_location(
+                        latitude=usta_xona.latitude,
+                        longitude=usta_xona.longitude
+                    )
+                except Exception:
+                    pass
         
-        await state.clear()
-        await callback.answer()
+        if user.language == 'uz':
+            final_text = "⬆️ Yuqorida topilgan usta xonalar"
+        else:
+            final_text = "⬆️ Найденные сервисы выше"
+        
+        await callback.message.answer(final_text)
+    else:
+        logger.warning(f"No usta xonalar found for user {callback.from_user.id}: brand_id={brand_id}, city_id={city_id}, service_types={service_types}")
+        if user.language == 'uz':
+            result_text = f"❌ {city.name_uz} shahrida {brand_name} uchun tanlangan xizmat turlari bo'yicha usta xonalar topilmadi."
+        else:
+            result_text = f"❌ Сервисы для {brand_name} в городе {city.name_ru} по выбранным типам услуг не найдены."
+        
+        await callback.message.answer(result_text)
+    
+    await state.clear()
+    await callback.answer()
+
+
+@router.callback_query(ShopSearchStates.choose_city, F.data.startswith("city_"))
+async def process_city_selection(callback: CallbackQuery, state: FSMContext):
+    """Process city selection and show shops"""
+    city_id = int(callback.data.split("_")[1])
+    city = await db.get_city(city_id)
+    
+    if not city:
+        await callback.answer("Xatolik yuz berdi!", show_alert=True)
         return
+    
+    data = await state.get_data()
+    brand_id = data.get('selected_brand')
+    brand_name = data.get('brand_name', '')
+    
+    user = await db.get_user(callback.from_user.id)
     
     # Search shops by brand (default behavior)
     shops = await db.search_shops(city_id, brand_id)
@@ -250,14 +460,20 @@ async def process_city_selection(callback: CallbackQuery, state: FSMContext):
                 shop_text += f"📦 {part_cats_formatted}\n"
             
             # Try to send photo if exists
-            if shop.photo_file_id:
+            if shop.photo_path:
                 try:
-                    await callback.message.answer_photo(
-                        photo=shop.photo_file_id,
-                        caption=shop_text
-                    )
+                    # Check if photo file exists
+                    if photo_exists(shop.photo_path):
+                        photo_file = FSInputFile(get_photo_path(shop.photo_path))
+                        await callback.message.answer_photo(
+                            photo=photo_file,
+                            caption=shop_text
+                        )
+                    else:
+                        await callback.message.answer(shop_text)
                 except Exception as e:
-                    # If photo fails (invalid file_id), send text only
+                    # If photo fails, send text only
+                    logger.error(f"Error sending shop photo: {e}")
                     await callback.message.answer(shop_text)
             else:
                 await callback.message.answer(shop_text)
@@ -486,13 +702,19 @@ async def search_usta_xona_yes(callback: CallbackQuery, state: FSMContext):
                 usta_text += f"🛠 {service_types_formatted}\n"
             
             # Try to send photo if exists
-            if usta_xona.photo_file_id:
+            if usta_xona.photo_path:
                 try:
-                    await callback.message.answer_photo(
-                        photo=usta_xona.photo_file_id,
-                        caption=usta_text
-                    )
-                except Exception:
+                    # Check if photo file exists
+                    if photo_exists(usta_xona.photo_path):
+                        photo_file = FSInputFile(get_photo_path(usta_xona.photo_path))
+                        await callback.message.answer_photo(
+                            photo=photo_file,
+                            caption=usta_text
+                        )
+                    else:
+                        await callback.message.answer(usta_text)
+                except Exception as e:
+                    logger.error(f"Error sending usta xona photo: {e}")
                     # If photo fails, send text only
                     await callback.message.answer(usta_text)
             else:

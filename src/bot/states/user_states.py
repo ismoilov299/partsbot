@@ -16,6 +16,14 @@ class ShopSearchStates(StatesGroup):
     view_results = State()
 
 
+class UstaXonaSearchStates(StatesGroup):
+    """States for usta xona search"""
+    choose_service_types = State()
+    choose_brand = State()
+    choose_city = State()
+    view_results = State()
+
+
 class ShopAddStates(StatesGroup):
     """States for adding a shop"""
     enter_shop_name = State()
