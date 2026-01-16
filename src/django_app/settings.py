@@ -96,8 +96,8 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'src.django_app.middleware.NullCharacterCleanerMiddleware',  # Clean null characters from POST data
     'django.middleware.csrf.CsrfViewMiddleware',
+    'src.django_app.middleware.NullCharacterCleanerMiddleware',  # Clean null characters from POST data (after CSRF)
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -172,3 +172,15 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'storage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Session and Cookie settings
+# For HTTP (not HTTPS), set these to False
+SESSION_COOKIE_SECURE = False  # Set to True only if using HTTPS
+CSRF_COOKIE_SECURE = False  # Set to True only if using HTTPS
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
