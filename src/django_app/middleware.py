@@ -34,7 +34,6 @@ class NullCharacterCleanerMiddleware:
         if request.method == 'POST':
             # Check if any POST field has null characters
             has_null_chars = False
-            post_data = None
             
             # Check all POST fields for null characters
             for key in request.POST.keys():
@@ -58,10 +57,10 @@ class NullCharacterCleanerMiddleware:
                             post_data[key] = cleaned_value
                             logger.info(f"Cleaned field '{key}': removed null characters")
                 
-                # Replace POST data - use _post to avoid re-parsing
-                # This is the proper way to replace POST data in Django
+                # Replace POST data properly
+                # Use _post to avoid re-parsing
                 request._post = post_data
-                # Also update the mutable POST
+                # Update POST to use the cleaned data
                 request.POST = post_data
         
         response = self.get_response(request)

@@ -8,43 +8,33 @@ class CleanedAuthenticationForm(AuthenticationForm):
     """
     Custom authentication form that cleans null characters from username and password
     This fixes the "Null characters are not allowed" error
+    
+    Note: Middleware should handle most cases, but this provides an additional safety layer
     """
     
     def clean_username(self):
         """Clean null characters from username"""
-        username = self.cleaned_data.get('username', '')
+        # Call parent first to get cleaned username
+        username = super().clean_username()
+        # Then clean null characters
         if username and isinstance(username, str):
-            # Remove null characters
             username = username.replace('\x00', '').strip()
         return username
     
     def clean(self):
         """Clean the entire form, including password"""
-        # Get username and password from form data before validation
-        username = self.data.get('username', '')
-        password = self.data.get('password', '')
-        
-        # Clean null characters from raw data
-        if username and isinstance(username, str) and '\x00' in username:
-            # Create mutable copy and clean
-            data = self.data.copy()
-            data['username'] = username.replace('\x00', '').strip()
-            self.data = data
-        
-        if password and isinstance(password, str) and '\x00' in password:
-            # Create mutable copy and clean
-            data = self.data.copy()
-            data['password'] = password.replace('\x00', '').strip()
-            self.data = data
-        
-        # Call parent clean method
+        # Call parent clean method (this will validate and authenticate)
+        # Middleware should have already cleaned null characters, but we double-check here
         cleaned_data = super().clean()
         
-        # Double check and clean password in cleaned_data
-        if 'password' in cleaned_data:
-            password = cleaned_data['password']
-            if password and isinstance(password, str):
-                cleaned_data['password'] = password.replace('\x00', '').strip()
+        # Double-check for null characters in cleaned data (safety measure)
+        if 'username' in cleaned_data:
+            username = cleaned_data['username']
+            if username and isinstance(username, str):
+                cleaned_data['username'] = username.replace('\x00', '').strip()
+        
+        # Note: password is not in cleaned_data for security reasons
+        # But middleware should have cleaned it already
         
         return cleaned_data
 
