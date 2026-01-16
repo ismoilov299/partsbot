@@ -6,7 +6,7 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 
-from bot.keyboards import get_cities_keyboard, get_car_brands_keyboard, Texts, get_cancel_keyboard, get_phone_keyboard, get_location_keyboard, get_part_categories_keyboard
+from bot.keyboards import get_cities_keyboard, get_car_brands_keyboard, Texts, get_cancel_keyboard, get_phone_keyboard, get_location_keyboard, get_part_categories_keyboard, get_main_menu_keyboard
 from bot.utils import database as db
 from bot.utils.photo import download_photo, get_photo_path
 from bot.states import ShopAddStates
@@ -40,10 +40,10 @@ async def process_shop_name(message: Message, state: FSMContext):
         await state.clear()
         user = await db.get_user(message.from_user.id)
         if user.language == 'uz':
-            text = "❌ Bekor qilindi"
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
         else:
-            text = "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     await state.update_data(shop_name=message.text)
@@ -94,10 +94,10 @@ async def process_phone_text(message: Message, state: FSMContext):
         await state.clear()
         user = await db.get_user(message.from_user.id)
         if user.language == 'uz':
-            text = "❌ Bekor qilindi"
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
         else:
-            text = "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     # Validate phone number (simple check)
@@ -193,10 +193,10 @@ async def process_skip_location(message: Message, state: FSMContext):
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         if user.language == 'uz':
-            text = "❌ Bekor qilindi"
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
         else:
-            text = "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     # Ask to send location again - location is required
@@ -214,10 +214,10 @@ async def process_address(message: Message, state: FSMContext):
         await state.clear()
         user = await db.get_user(message.from_user.id)
         if user.language == 'uz':
-            text = "❌ Bekor qilindi"
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
         else:
-            text = "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     await state.update_data(address=message.text)
@@ -271,10 +271,10 @@ async def process_photo_error(message: Message, state: FSMContext):
         await state.clear()
         user = await db.get_user(message.from_user.id)
         if user.language == 'uz':
-            text = "❌ Bekor qilindi"
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
         else:
-            text = "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     user = await db.get_user(message.from_user.id)
@@ -448,10 +448,10 @@ async def process_description(message: Message, state: FSMContext):
         await state.clear()
         user = await db.get_user(message.from_user.id)
         if user.language == 'uz':
-            text = "❌ Bekor qilindi"
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
         else:
-            text = "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     await state.update_data(description=message.text)
@@ -683,10 +683,10 @@ async def cancel_shop(callback: CallbackQuery, state: FSMContext):
     user = await db.get_user(callback.from_user.id)
     
     if user.language == 'uz':
-        text = "❌ Bekor qilindi.\n\nQaytadan boshlash uchun 'Do'kon kiritish' tugmasini bosing."
+        text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
     else:
-        text = "❌ Отменено.\n\nЧтобы начать заново, нажмите кнопку 'Добавить магазин'."
+        text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
     
-    await callback.message.answer(text)
+    await callback.message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
     await state.clear()
     await callback.answer()

@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command, StateFilter
 
-from bot.keyboards import get_cancel_keyboard, get_phone_keyboard, Texts
+from bot.keyboards import get_cancel_keyboard, get_phone_keyboard, get_main_menu_keyboard, Texts
 from bot.utils import database as db
 from bot.states import RequestStates
 
@@ -65,10 +65,10 @@ async def process_request_description(message: Message, state: FSMContext):
         await state.clear()
         user = await db.get_user(message.from_user.id)
         if user.language == 'uz':
-            text = "❌ Bekor qilindi"
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
         else:
-            text = "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     # Save description to state
@@ -118,10 +118,10 @@ async def process_phone_text(message: Message, state: FSMContext):
         await state.clear()
         user = await db.get_user(message.from_user.id)
         if user.language == 'uz':
-            text = "❌ Bekor qilindi"
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
         else:
-            text = "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     phone = message.text.strip()

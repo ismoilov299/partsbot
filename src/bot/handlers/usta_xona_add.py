@@ -42,8 +42,11 @@ async def process_service_name(message: Message, state: FSMContext):
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
-        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        if user.language == 'uz':
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
+        else:
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     await state.update_data(service_name=message.text)
@@ -90,8 +93,11 @@ async def process_phone_text(message: Message, state: FSMContext):
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
-        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        if user.language == 'uz':
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
+        else:
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     phone = message.text.strip()
@@ -164,8 +170,11 @@ async def process_address_directly(message: Message, state: FSMContext):
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
-        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        if user.language == 'uz':
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
+        else:
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     await state.update_data(address=message.text)
@@ -186,8 +195,11 @@ async def process_address(message: Message, state: FSMContext):
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
-        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        if user.language == 'uz':
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
+        else:
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     await state.update_data(address=message.text)
@@ -242,8 +254,11 @@ async def skip_photo(message: Message, state: FSMContext):
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
-        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        if user.language == 'uz':
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
+        else:
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     user = await db.get_user(message.from_user.id)
@@ -293,8 +308,11 @@ async def process_description(message: Message, state: FSMContext):
     if message.text in [Texts.CANCEL_UZ, Texts.CANCEL_RU]:
         await state.clear()
         user = await db.get_user(message.from_user.id)
-        text = "❌ Bekor qilindi" if user.language == 'uz' else "❌ Отменено"
-        await message.answer(text, reply_markup=ReplyKeyboardRemove())
+        if user.language == 'uz':
+            text = f"❌ Bekor qilindi.\n\n{Texts.MAIN_MENU_UZ}:"
+        else:
+            text = f"❌ Отменено.\n\n{Texts.MAIN_MENU_RU}:"
+        await message.answer(text, reply_markup=get_main_menu_keyboard(user.language))
         return
     
     description = None if message.text.lower() in ['keyingi', 'далее', 'skip'] else message.text
