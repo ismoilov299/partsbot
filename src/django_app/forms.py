@@ -37,4 +37,10 @@ class CleanedAuthenticationForm(AuthenticationForm):
         if username and isinstance(username, str):
             username = username.replace('\x00', '').strip()
         return username
+    
+    def clean(self):
+        """Clean and authenticate"""
+        # Call parent clean method - this will authenticate the user
+        cleaned_data = super().clean()
+        return cleaned_data
 
