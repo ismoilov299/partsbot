@@ -97,7 +97,8 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'src.django_app.middleware.NullCharacterCleanerMiddleware',  # Clean null characters from POST data (after CSRF)
+    # Temporarily disabled to test login
+    # 'src.django_app.middleware.NullCharacterCleanerMiddleware',  # Clean null characters from POST data (after CSRF)
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

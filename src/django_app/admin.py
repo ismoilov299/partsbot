@@ -3,9 +3,10 @@ Django admin configuration
 """
 from django.contrib import admin
 from .models import User, City, CarBrand, Shop, UstaXona, Request
-# Temporarily disabled custom form - using middleware instead
-# from .forms import CleanedAuthenticationForm
-# admin.site.login_form = CleanedAuthenticationForm
+from .forms import CleanedAuthenticationForm
+
+# Use custom authentication form that cleans null characters
+admin.site.login_form = CleanedAuthenticationForm
 
 
 @admin.register(User)
