@@ -32,11 +32,15 @@ class NullCharacterCleanerMiddleware:
     def __call__(self, request):
         # Process all POST requests
         if request.method == 'POST':
-            # Check if any POST field has null characters
+            # Check if any POST field has null characters (except CSRF token)
             has_null_chars = False
             
-            # Check all POST fields for null characters
+            # Check all POST fields for null characters (skip CSRF token)
             for key in request.POST.keys():
+                # Skip CSRF token field - don't modify it
+                if key in ['csrfmiddlewaretoken', 'csrf_token']:
+                    continue
+                    
                 value = request.POST.get(key, '')
                 if value and isinstance(value, str) and '\x00' in value:
                     has_null_chars = True
@@ -48,8 +52,12 @@ class NullCharacterCleanerMiddleware:
                 # Create a mutable copy of POST data
                 post_data = request.POST.copy()
                 
-                # Clean all POST fields
+                # Clean all POST fields (except CSRF token)
                 for key in list(post_data.keys()):
+                    # Skip CSRF token - don't modify it
+                    if key in ['csrfmiddlewaretoken', 'csrf_token']:
+                        continue
+                        
                     value = post_data[key]
                     if value:
                         cleaned_value = clean_null_characters(value)
