@@ -71,3 +71,35 @@ class NullCharacterCleanerMiddleware:
         response = self.get_response(request)
         return response
 
+
+class RemoveCOOPHeaderMiddleware:
+    """
+    Middleware to remove Cross-Origin-Opener-Policy header for HTTP
+    This header requires HTTPS or localhost, so we remove it for HTTP
+    """
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        response = self.get_response(request)
+        
+        # Remove Cross-Origin-Opener-Policy header for HTTP
+        # This header is only valid for HTTPS or localhost
+        # Check if header exists and remove it
+        if hasattr(response, 'headers'):
+            # Django 3.2+ uses response.headers
+            if 'Cross-Origin-Opener-Policy' in response.headers:
+                del response.headers['Cross-Origin-Opener-Policy']
+        elif hasattr(response, '_headers'):
+            # Older Django versions use _headers dict
+            coop_key = None
+            for key in list(response._headers.keys()):
+                if key.lower() == 'cross-origin-opener-policy':
+                    coop_key = key
+                    break
+            if coop_key:
+                del response._headers[coop_key]
+        
+        return response
+

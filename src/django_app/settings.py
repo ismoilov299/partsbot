@@ -101,6 +101,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'src.django_app.middleware.RemoveCOOPHeaderMiddleware',  # Remove COOP header for HTTP (after SecurityMiddleware)
 ]
 
 ROOT_URLCONF = 'src.django_app.urls'
@@ -184,3 +185,23 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
 SESSION_SAVE_EVERY_REQUEST = False
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Security settings for HTTP (disable secure headers that require HTTPS)
+# These headers require HTTPS or localhost, so disable them for HTTP
+SECURE_BROWSER_XSS_FILTER = False
+SECURE_CONTENT_TYPE_NOSNIFF = True  # This is safe for HTTP
+X_FRAME_OPTIONS = 'SAMEORIGIN'  # Allow same-origin framing
+
+# Cross-Origin-Opener-Policy: Disable for HTTP (only works with HTTPS or localhost)
+# Django 5.x uses this setting, but we need to remove the header for HTTP
+# We'll handle this in custom middleware
+try:
+    # Try to set to None (may not work in all Django versions)
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+except:
+    pass
+
+SECURE_REFERRER_POLICY = None  # Optional: disable for HTTP
+SECURE_HSTS_SECONDS = 0  # Disable HSTS for HTTP
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
